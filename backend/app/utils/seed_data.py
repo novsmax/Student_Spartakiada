@@ -5,30 +5,61 @@ from ..database import SessionLocal, engine, Base
 from ..models import *
 from ..api.auth import get_password_hash
 
-# Таблица начисления баллов в зависимости от места
-POINTS_BY_PLACE = {
-    1: 10.0,  # 1 место
-    2: 9.0,  # 2 место
-    3: 8.0,  # 3 место
-    4: 7.0,  # 4 место
-    5: 6.0,  # 5 место
-    6: 5.0,  # 6 место
-    7: 4.0,  # 7 место
-    8: 3.0,  # 8 место
-    9: 2.0,  # 9 место
-    10: 1.0,  # 10 место и далее
-}
-
 
 def get_points_for_place(place):
-    """Получить баллы за место"""
-    return POINTS_BY_PLACE.get(place, 1.0)
+    """Получить баллы за место согласно правилам спартакиады"""
+    if place <= 10:
+        return 11 - place  # 1 место = 10 баллов, 2 место = 9 баллов, ..., 10 место = 1 балл
+    else:
+        return 1  # 11+ места = 1 балл
 
 
 def is_team_sport(sport_name):
     """Определить, является ли вид спорта командным"""
     team_sports = ['Баскетбол', 'Волейбол', 'Футбол']
     return any(sport in sport_name for sport in team_sports)
+
+
+def generate_realistic_result(sport_name, gender, is_good_athlete=False):
+    """Генерировать реалистичные результаты для разных видов спорта с учетом пола"""
+
+    if "100м" in sport_name:
+        # Время от 11 до 16 секунд
+        if gender == "М":
+            base_time = random.uniform(11.0, 14.5) if is_good_athlete else random.uniform(13.0, 16.0)
+        else:
+            base_time = random.uniform(12.5, 16.0) if is_good_athlete else random.uniform(14.5, 18.0)
+        return f"0:00:{base_time:.2f}", base_time
+
+    elif "1000м" in sport_name:
+        # Время от 2:30 до 5:00
+        if gender == "М":
+            total_seconds = random.uniform(150, 240) if is_good_athlete else random.uniform(200, 300)
+        else:
+            total_seconds = random.uniform(180, 280) if is_good_athlete else random.uniform(220, 350)
+        minutes = int(total_seconds // 60)
+        seconds = int(total_seconds % 60)
+        return f"0:{minutes:02d}:{seconds:02d}", total_seconds
+
+    elif "Плавание" in sport_name:
+        # Время от 1:00 до 2:30
+        if gender == "М":
+            total_seconds = random.uniform(60, 120) if is_good_athlete else random.uniform(90, 150)
+        else:
+            total_seconds = random.uniform(70, 130) if is_good_athlete else random.uniform(100, 180)
+        minutes = int(total_seconds // 60)
+        seconds = int(total_seconds % 60)
+        return f"0:{minutes:02d}:{seconds:02d}", total_seconds
+
+    elif sport_name in ['Баскетбол', 'Волейбол', 'Футбол']:
+        # Для командных видов - результат команды
+        team_score = random.uniform(60, 95) if is_good_athlete else random.uniform(40, 80)
+        return None, team_score
+
+    else:
+        # Для шахмат, тенниса - очки от 0 до 100
+        score = random.uniform(70, 95) if is_good_athlete else random.uniform(40, 85)
+        return None, score
 
 
 def seed_database():
@@ -93,7 +124,7 @@ def seed_database():
             db.add(sport_type)
         db.commit()
 
-        # Create admin user (для совместимости, хотя авторизация отключена)
+        # Create admin user
         print("Создание пользователей...")
         admin = User(
             first_name="Админ",
@@ -133,57 +164,105 @@ def seed_database():
             db.add(judge)
         db.commit()
 
-        # Create students
-        print("Создание студентов...")
+        # Create students with equal gender distribution
+        print("Создание студентов с равным распределением по полу...")
         students = []
-        student_names = [
-            ("Александр", "Новожилов", "Андреевич", "М"),
-            ("Екатерина", "Белова", "Дмитриевна", "Ж"),
-            ("Сергей", "Черных", "Иванович", "М"),
-            ("Анастасия", "Золотова", "Павловна", "Ж"),
-            ("Максим", "Серебряков", "Олегович", "М"),
-            ("Дарья", "Красникова", "Алексеевна", "Ж"),
-            ("Артем", "Зайцев", "Николаевич", "М"),
-            ("Полина", "Волкова", "Сергеевна", "Ж"),
-            ("Илья", "Медведев", "Константинович", "М"),
-            ("София", "Лисицына", "Андреевна", "Ж"),
+
+        # Мужские имена
+        male_names = [
+            ("Александр", "Новожилов", "Андреевич"),
+            ("Сергей", "Черных", "Иванович"),
+            ("Максим", "Серебряков", "Олегович"),
+            ("Артем", "Зайцев", "Николаевич"),
+            ("Илья", "Медведев", "Константинович"),
+            ("Дмитрий", "Волков", "Петрович"),
+            ("Андрей", "Соколов", "Алексеевич"),
+            ("Михаил", "Козлов", "Викторович"),
+            ("Николай", "Морозов", "Сергеевич"),
+            ("Владимир", "Лебедев", "Олегович"),
+        ]
+
+        # Женские имена
+        female_names = [
+            ("Екатерина", "Белова", "Дмитриевна"),
+            ("Анастасия", "Золотова", "Павловна"),
+            ("Дарья", "Красникова", "Алексеевна"),
+            ("Полина", "Волкова", "Сергеевна"),
+            ("София", "Лисицына", "Андреевна"),
+            ("Мария", "Орлова", "Ивановна"),
+            ("Анна", "Петрова", "Николаевна"),
+            ("Елена", "Смирнова", "Андреевна"),
+            ("Ольга", "Кузнецова", "Михайловна"),
+            ("Наталья", "Попова", "Владимировна"),
         ]
 
         for group in groups:
-            for j in range(10):  # 10 students per group
-                name_data = student_names[j % len(student_names)]
-                student = Student(
-                    first_name=name_data[0],
-                    last_name=name_data[1],
-                    middle_name=name_data[2],
-                    gender=name_data[3],
+            # По 5 мужчин и 5 женщин в каждой группе
+            for j in range(5):
+                # Мужчина
+                male_name_data = male_names[j % len(male_names)]
+                male_student = Student(
+                    first_name=male_name_data[0],
+                    last_name=male_name_data[1],
+                    middle_name=male_name_data[2],
+                    gender="М",
                     group_id=group.id
                 )
-                students.append(student)
-                db.add(student)
+                students.append(male_student)
+                db.add(male_student)
+
+                # Женщина
+                female_name_data = female_names[j % len(female_names)]
+                female_student = Student(
+                    first_name=female_name_data[0],
+                    last_name=female_name_data[1],
+                    middle_name=female_name_data[2],
+                    gender="Ж",
+                    group_id=group.id
+                )
+                students.append(female_student)
+                db.add(female_student)
         db.commit()
 
-        # Create teams
+        # Create teams for team sports
         print("Создание команд...")
         teams = []
         for faculty in faculties:
             faculty_students = [s for s in students if s.group.faculty_id == faculty.id]
+            male_students = [s for s in faculty_students if s.gender.value == "М"]
+            female_students = [s for s in faculty_students if s.gender.value == "Ж"]
+
             for sport_type in sport_types:
                 if is_team_sport(sport_type.name):
-                    # Для командных видов спорта создаем команды
-                    team = Team(
+                    # Создаем мужскую команду
+                    male_team = Team(
                         sport_type_id=sport_type.id,
                         faculty_id=faculty.id
                     )
-                    db.add(team)
+                    db.add(male_team)
                     db.commit()
 
-                    # Добавляем 5-7 студентов в команду
-                    team_size = random.randint(5, 7)
-                    selected_students = random.sample(faculty_students, min(team_size, len(faculty_students)))
-                    for student in selected_students:
-                        team.students.append(student)
-                    teams.append(team)
+                    # Добавляем мужчин в команду
+                    team_size = min(5, len(male_students))
+                    selected_male_students = random.sample(male_students, team_size)
+                    for student in selected_male_students:
+                        male_team.students.append(student)
+                    teams.append(male_team)
+
+                    # Создаем женскую команду
+                    female_team = Team(
+                        sport_type_id=sport_type.id,
+                        faculty_id=faculty.id
+                    )
+                    db.add(female_team)
+                    db.commit()
+
+                    # Добавляем женщин в команду
+                    team_size = min(5, len(female_students))
+                    selected_female_students = random.sample(female_students, team_size)
+                    for student in selected_female_students:
+                        female_team.students.append(student)
+                    teams.append(female_team)
         db.commit()
 
         # Create competitions
@@ -202,7 +281,6 @@ def seed_database():
             db.add(competition)
             db.commit()
 
-            # Add teams to competition для командных видов
             if is_team_sport(sport_type.name):
                 sport_teams = [t for t in teams if t.sport_type_id == sport_type.id]
                 for team in sport_teams:
@@ -210,117 +288,128 @@ def seed_database():
             competitions.append(competition)
         db.commit()
 
-        # Create student performances with proper point allocation
-        print("Создание результатов выступлений с правильным начислением баллов...")
+        # Create student performances with realistic results
+        print("Создание результатов выступлений с раздельным подсчетом по полу...")
 
         for competition in competitions:
             sport_type = competition.sport_type
 
             if is_team_sport(sport_type.name):
-                # КОМАНДНЫЕ ВИДЫ СПОРТА
-                # Генерируем результаты для команд
-                team_results = []
+                # КОМАНДНЫЕ ВИДЫ СПОРТА - разделенные по полу
                 for team in competition.teams:
-                    # Генерируем случайный результат команды
-                    team_score = random.uniform(50, 100)  # Примерный счет
-                    team_results.append((team, team_score))
+                    # Определяем пол команды по первому участнику
+                    team_gender = team.students[0].gender.value if team.students else "М"
 
-                # Сортируем команды по результатам
-                team_results.sort(key=lambda x: x[1], reverse=True)
+                    # Генерируем результат команды
+                    time_result, sort_value = generate_realistic_result(
+                        sport_type.name,
+                        team_gender,
+                        random.choice([True, False])  # Случайно хорошая или обычная команда
+                    )
 
-                # Присваиваем места и баллы командам
-                for place, (team, score) in enumerate(team_results, 1):
-                    points = get_points_for_place(place)
-
-                    # Всем членам команды одинаковые баллы
+                    # Всем членам команды одинаковый результат
                     for student in team.students:
                         performance = StudentPerformance(
                             student_id=student.id,
                             sport_type_id=competition.sport_type_id,
                             competition_id=competition.id,
                             judge_id=random.choice(judges).id,
-                            points=points,  # Одинаковые баллы для всей команды
-                            time_result=None
+                            points=0,  # Будет пересчитано автоматически
+                            time_result=time_result,
+                            original_result=sort_value
                         )
                         db.add(performance)
 
             else:
-                # ИНДИВИДУАЛЬНЫЕ ВИДЫ СПОРТА
-                # Собираем всех участников
-                all_participants = []
+                # ИНДИВИДУАЛЬНЫЕ ВИДЫ СПОРТА - обеспечиваем участие обоих полов
+                male_participants = []
+                female_participants = []
 
                 for faculty in faculties:
                     faculty_students = [s for s in students if s.group.faculty_id == faculty.id]
-                    # Выбираем 3-5 участников от факультета
-                    participants = random.sample(faculty_students, min(random.randint(3, 5), len(faculty_students)))
+                    male_students = [s for s in faculty_students if s.gender.value == "М"]
+                    female_students = [s for s in faculty_students if s.gender.value == "Ж"]
 
-                    for student in participants:
-                        # Генерируем результат
-                        if "100м" in sport_type.name:
-                            # Время от 10 до 15 секунд
-                            seconds = random.uniform(10, 15)
-                            time_result = f"0:00:{seconds:.2f}"
-                            sort_key = seconds  # Меньше - лучше
-                        elif "1000м" in sport_type.name:
-                            # Время от 2:30 до 4:00
-                            total_seconds = random.uniform(150, 240)
-                            minutes = int(total_seconds // 60)
-                            seconds = int(total_seconds % 60)
-                            time_result = f"0:{minutes:02d}:{seconds:02d}"
-                            sort_key = total_seconds  # Меньше - лучше
-                        elif "Плавание" in sport_type.name:
-                            # Время от 1:30 до 2:00
-                            total_seconds = random.uniform(90, 120)
-                            minutes = int(total_seconds // 60)
-                            seconds = int(total_seconds % 60)
-                            time_result = f"0:{minutes:02d}:{seconds:02d}"
-                            sort_key = total_seconds  # Меньше - лучше
-                        else:
-                            # Для шахмат, тенниса - очки
-                            time_result = None
-                            sort_key = -random.uniform(70, 100)  # Больше - лучше (отрицательное для сортировки)
+                    # Выбираем 2-3 мужчин и 2-3 женщин от каждого факультета
+                    male_count = random.randint(2, min(3, len(male_students)))
+                    female_count = random.randint(2, min(3, len(female_students)))
 
-                        all_participants.append({
-                            'student': student,
-                            'time_result': time_result,
-                            'sort_key': sort_key
-                        })
+                    male_participants.extend(random.sample(male_students, male_count))
+                    female_participants.extend(random.sample(female_students, female_count))
 
-                # Сортируем участников по результатам
-                all_participants.sort(key=lambda x: x['sort_key'])
+                # Создаем выступления для мужчин
+                for student in male_participants:
+                    is_good_athlete = random.random() < 0.3  # 30% шанс быть хорошим спортсменом
 
-                # Присваиваем места и баллы
-                for place, participant in enumerate(all_participants, 1):
-                    points = get_points_for_place(place)
+                    time_result, sort_value = generate_realistic_result(
+                        sport_type.name,
+                        student.gender.value,
+                        is_good_athlete
+                    )
 
                     performance = StudentPerformance(
-                        student_id=participant['student'].id,
+                        student_id=student.id,
                         sport_type_id=competition.sport_type_id,
                         competition_id=competition.id,
                         judge_id=random.choice(judges).id,
-                        points=points,  # Баллы в зависимости от места
-                        time_result=participant['time_result']
+                        points=0,  # Будет пересчитано автоматически
+                        time_result=time_result,
+                        original_result=sort_value
+                    )
+                    db.add(performance)
+
+                # Создаем выступления для женщин
+                for student in female_participants:
+                    is_good_athlete = random.random() < 0.3  # 30% шанс быть хорошим спортсменом
+
+                    time_result, sort_value = generate_realistic_result(
+                        sport_type.name,
+                        student.gender.value,
+                        is_good_athlete
+                    )
+
+                    performance = StudentPerformance(
+                        student_id=student.id,
+                        sport_type_id=competition.sport_type_id,
+                        competition_id=competition.id,
+                        judge_id=random.choice(judges).id,
+                        points=0,  # Будет пересчитано автоматически
+                        time_result=time_result,
+                        original_result=sort_value
                     )
                     db.add(performance)
 
         db.commit()
 
-        # Calculate faculty results
-        print("Расчет результатов факультетов...")
-        from ..api.results import update_faculty_results, update_total_points
-        for sport_type in sport_types:
-            update_faculty_results(db, sport_type.id)
-        update_total_points(db)
+        # Теперь пересчитываем баллы согласно местам с раздельным подсчетом по полу
+        print("Пересчет баллов с раздельным подсчетом по полу...")
+        from ..api.results import recalculate_competition_points, update_faculty_results_all
 
-        print("База данных успешно заполнена тестовыми данными!")
+        for sport_type in sport_types:
+            recalculate_competition_points(db, sport_type.id)
+
+        # Обновляем результаты факультетов
+        update_faculty_results_all(db)
+
+        print("База данных успешно заполнена с раздельным подсчетом баллов по полу!")
         print(f"Создано:")
         print(f"  - Факультетов: {len(faculties)}")
         print(f"  - Групп: {len(groups)}")
-        print(f"  - Студентов: {len(students)}")
+        print(f"  - Студентов: {len(students)} (по {len(students) // 2} мужчин и женщин)")
         print(f"  - Видов спорта: {len(sport_types)}")
         print(f"  - Команд: {len(teams)}")
         print(f"  - Соревнований: {len(competitions)}")
         print(f"  - Выступлений: {db.query(StudentPerformance).count()}")
+
+        # Показываем примеры баллов
+        print("\nСистема начисления баллов (раздельно для каждого пола):")
+        print("  МУЖЧИНЫ:")
+        for i in range(1, 4):
+            print(f"    {i} место = {get_points_for_place(i)} баллов")
+        print("  ЖЕНЩИНЫ:")
+        for i in range(1, 4):
+            print(f"    {i} место = {get_points_for_place(i)} баллов")
+        print(f"  11+ места (любой пол) = {get_points_for_place(11)} балл")
 
     except Exception as e:
         print(f"Ошибка при заполнении базы данных: {e}")
@@ -331,6 +420,5 @@ def seed_database():
 
 
 if __name__ == "__main__":
-    # Create all tables
     Base.metadata.create_all(bind=engine)
     seed_database()

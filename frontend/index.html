@@ -75,6 +75,44 @@
         .btn-delete, .btn-add {
             display: inline-block !important;
         }
+
+        /* Стили для центрированных сообщений в таблице */
+        .no-sport-message,
+        .no-results-message,
+        .error-message {
+            text-align: center !important;
+            vertical-align: middle !important;
+            padding: 50px 20px !important;
+            font-size: 20px !important;
+            font-weight: bold !important;
+            color: #666 !important;
+            background-color: #f8f9fa !important;
+            border: none !important;
+            position: relative;
+        }
+
+        .no-sport-message {
+            color: #007bff !important;
+            background-color: #e7f3ff !important;
+        }
+
+        .no-results-message {
+            color: #28a745 !important;
+            background-color: #e8f5e9 !important;
+        }
+
+        .error-message {
+            color: #dc3545 !important;
+            background-color: #f8d7da !important;
+        }
+
+        /* Дополнительные стили для центрирования */
+        .table-body tr td.no-sport-message,
+        .table-body tr td.no-results-message,
+        .table-body tr td.error-message {
+            height: 200px;
+            vertical-align: middle;
+        }
     </style>
 </head>
 <body>

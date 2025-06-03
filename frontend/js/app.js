@@ -25,6 +25,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         radio.addEventListener('change', async (e) => {
             currentGenderFilter = e.target.value;
             await loadResults();
+            await loadRating();
         });
     });
 });
@@ -66,7 +67,6 @@ function updatePlaceInput() {
     const rows = tbody.getElementsByTagName('tr');
     const nextPlace = rows.length + 1;
 
-    // Находим поле места и устанавливаем следующее место
     const placeInput = document.getElementById('place-input');
     if (placeInput) {
         placeInput.value = nextPlace;
@@ -85,9 +85,11 @@ async function loadResults() {
             return;
         }
 
-        let url = `${API_URL}/results/competition-results/`;
-        if (currentSportType) {
-            url += `?sport_type_id=${currentSportType}`;
+        let url = `${API_URL}/results/competition-results/?sport_type_id=${currentSportType}`;
+
+        // Добавляем фильтр по полу если он установлен
+        if (currentGenderFilter) {
+            url += `&gender=${currentGenderFilter}`;
         }
 
         console.log('Loading results from:', url);
@@ -104,7 +106,7 @@ async function loadResults() {
 
         if (Array.isArray(results)) {
             if (results.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Нет результатов</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" class="no-results-message">Нет результатов</td></tr>';
                 updatePlaceInput();
                 return;
             }
@@ -113,130 +115,255 @@ async function loadResults() {
             const sportName = document.querySelector(`#sport-type option[value="${currentSportType}"]`)?.textContent || '';
             const isTeamSport = ['Баскетбол', 'Волейбол', 'Футбол'].some(sport => sportName.includes(sport));
 
-            if (isTeamSport && currentSportType) {
-                // Для командных видов спорта группируем по институтам
-                let filteredResults = results;
-
-                // Применяем фильтр по полу если он установлен
-                if (currentGenderFilter) {
-                    filteredResults = results.filter(performance =>
-                        performance.gender === currentGenderFilter
-                    );
+            if (currentGenderFilter) {
+                // РАЗДЕЛЬНЫЙ ПОДСЧЕТ ПО ПОЛУ - показываем с баллами за места
+                if (isTeamSport) {
+                    displayTeamResultsWithPoints(results);
+                } else {
+                    displayIndividualResultsWithPoints(results);
                 }
-
-                const facultyGroups = {};
-                filteredResults.forEach(performance => {
-                    if (!facultyGroups[performance.faculty_id]) {
-                        facultyGroups[performance.faculty_id] = {
-                            faculty_abbreviation: performance.faculty_abbreviation,
-                            place: performance.place,
-                            points: performance.points,
-                            members: []
-                        };
-                    }
-                    facultyGroups[performance.faculty_id].members.push(performance.student_name);
-                });
-
-                // Отображаем командные результаты
-                Object.values(facultyGroups).forEach(group => {
-                    let placeClass = '';
-                    if (group.place === 1) placeClass = 'gold-place';
-                    else if (group.place === 2) placeClass = 'silver-place';
-                    else if (group.place === 3) placeClass = 'bronze-place';
-
-                    // Заголовок команды
-                    const headerRow = document.createElement('tr');
-                    headerRow.className = 'team-header';
-                    headerRow.innerHTML = `
-                        <td class="${placeClass}">${group.place}</td>
-                        <td colspan="2">${group.faculty_abbreviation} - Команда</td>
-                        <td>-</td>
-                        <td>${group.points.toFixed(2)}</td>
-                        <td></td>
-                    `;
-                    tbody.appendChild(headerRow);
-
-                    // Члены команды
-                    group.members.forEach(member => {
-                        const memberRow = document.createElement('tr');
-                        memberRow.className = 'team-member';
-                        memberRow.innerHTML = `
-                            <td></td>
-                            <td></td>
-                            <td style="padding-left: 30px;">↳ ${member}</td>
-                            <td>-</td>
-                            <td>${group.points.toFixed(2)}</td>
-                            <td></td>
-                        `;
-                        tbody.appendChild(memberRow);
-                    });
-                });
             } else {
-                // Для индивидуальных видов спорта
-                let filteredResults = results;
-
-                // Применяем фильтр по полу если он установлен
-                if (currentGenderFilter) {
-                    filteredResults = results.filter(performance =>
-                        performance.gender === currentGenderFilter
-                    );
+                // ОБЩИЙ ПРОТОКОЛ - показываем абсолютные результаты без заголовков по полу
+                if (isTeamSport) {
+                    displayMixedTeamResults(results);
+                } else {
+                    displayMixedIndividualResults(results);
                 }
-
-                filteredResults.forEach(performance => {
-                    const row = document.createElement('tr');
-
-                    let placeClass = '';
-                    if (performance.place === 1) placeClass = 'gold-place';
-                    else if (performance.place === 2) placeClass = 'silver-place';
-                    else if (performance.place === 3) placeClass = 'bronze-place';
-
-                    let resultDisplay = performance.time_result || '-';
-                    if (performance.time_result) {
-                        resultDisplay = performance.time_result;
-                    } else if (!currentSportType || currentSportType > 3) {
-                        resultDisplay = `${performance.points.toFixed(2)} балла`;
-                    }
-
-                    row.innerHTML = `
-                        <td class="${placeClass}">${performance.place}</td>
-                        <td>${performance.faculty_abbreviation}</td>
-                        <td>${performance.student_name}</td>
-                        <td>${resultDisplay}</td>
-                        <td>${performance.points.toFixed(2)}</td>
-                        <td>
-                            <button class="btn-delete" onclick="deleteResult(${performance.performance_id})">Удалить</button>
-                        </td>
-                    `;
-                    tbody.appendChild(row);
-                });
             }
         } else {
             console.error('Results is not an array:', results);
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Ошибка загрузки данных</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" class="error-message">Ошибка загрузки данных</td></tr>';
         }
 
-        // Обновляем поле места после загрузки результатов
         updatePlaceInput();
 
     } catch (error) {
         console.error('Error loading results:', error);
         const tbody = document.getElementById('results-tbody');
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Ошибка загрузки результатов</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="error-message">Ошибка загрузки результатов</td></tr>';
         updatePlaceInput();
     }
+}
+
+function displayTeamResultsWithPoints(results) {
+    const tbody = document.getElementById('results-tbody');
+
+    // Группируем по факультетам
+    const facultyGroups = {};
+    results.forEach(performance => {
+        const facultyId = performance.faculty_id;
+        if (!facultyGroups[facultyId]) {
+            facultyGroups[facultyId] = {
+                faculty_abbreviation: performance.faculty_abbreviation,
+                place: performance.place,
+                points: performance.points,
+                members: []
+            };
+        }
+        facultyGroups[facultyId].members.push(performance.student_name);
+    });
+
+    // Отображаем командные результаты с баллами
+    Object.values(facultyGroups).forEach(group => {
+        let placeClass = '';
+        if (group.place === 1) placeClass = 'gold-place';
+        else if (group.place === 2) placeClass = 'silver-place';
+        else if (group.place === 3) placeClass = 'bronze-place';
+
+        // Заголовок команды
+        const headerRow = document.createElement('tr');
+        headerRow.className = 'team-header';
+        headerRow.innerHTML = `
+            <td class="${placeClass}">${group.place}</td>
+            <td colspan="2">${group.faculty_abbreviation} - Команда</td>
+            <td>-</td>
+            <td>${group.points.toFixed(0)}</td>
+            <td></td>
+        `;
+        tbody.appendChild(headerRow);
+
+        // Члены команды
+        group.members.forEach(member => {
+            const memberRow = document.createElement('tr');
+            memberRow.className = 'team-member';
+            memberRow.innerHTML = `
+                <td></td>
+                <td></td>
+                <td style="padding-left: 30px;">↳ ${member}</td>
+                <td>-</td>
+                <td>${group.points.toFixed(0)}</td>
+                <td></td>
+            `;
+            tbody.appendChild(memberRow);
+        });
+    });
+}
+
+function displayIndividualResultsWithPoints(results) {
+    const tbody = document.getElementById('results-tbody');
+
+    // Отображаем индивидуальные результаты с баллами
+    results.forEach(performance => {
+        const row = document.createElement('tr');
+
+        let placeClass = '';
+        if (performance.place === 1) placeClass = 'gold-place';
+        else if (performance.place === 2) placeClass = 'silver-place';
+        else if (performance.place === 3) placeClass = 'bronze-place';
+
+        let resultDisplay = performance.time_result || '-';
+        if (performance.time_result) {
+            resultDisplay = performance.time_result;
+        } else if (performance.original_result) {
+            resultDisplay = `${performance.original_result.toFixed(1)} очков`;
+        } else {
+            resultDisplay = '-';
+        }
+
+        row.innerHTML = `
+            <td class="${placeClass}">${performance.place}</td>
+            <td>${performance.faculty_abbreviation}</td>
+            <td>${performance.student_name}</td>
+            <td>${resultDisplay}</td>
+            <td>${performance.points.toFixed(0)}</td>
+            <td>
+                <button class="btn-delete" onclick="deleteResult(${performance.performance_id})">Удалить</button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+function displayMixedTeamResults(results) {
+    const tbody = document.getElementById('results-tbody');
+
+    // Группируем по командам (факультет + пол)
+    const teamGroups = {};
+    results.forEach(performance => {
+        const teamKey = performance.faculty_abbreviation; // Уже содержит пол в скобках
+        if (!teamGroups[teamKey]) {
+            teamGroups[teamKey] = {
+                team_name: teamKey,
+                place: performance.place,
+                original_result: performance.original_result,
+                time_result: performance.time_result,
+                members: []
+            };
+        }
+        teamGroups[teamKey].members.push(performance.student_name);
+    });
+
+    // Отображаем командные результаты без баллов
+    Object.values(teamGroups).forEach(group => {
+        let placeClass = '';
+        if (group.place === 1) placeClass = 'gold-place';
+        else if (group.place === 2) placeClass = 'silver-place';
+        else if (group.place === 3) placeClass = 'bronze-place';
+
+        let resultDisplay = group.time_result || '-';
+        if (group.time_result) {
+            resultDisplay = group.time_result;
+        } else if (group.original_result) {
+            resultDisplay = `${group.original_result.toFixed(1)} очков`;
+        } else {
+            resultDisplay = '-';
+        }
+
+        // Заголовок команды
+        const headerRow = document.createElement('tr');
+        headerRow.className = 'team-header';
+        headerRow.innerHTML = `
+            <td class="${placeClass}">${group.place}</td>
+            <td colspan="2">${group.team_name}</td>
+            <td>${resultDisplay}</td>
+            <td>-</td>
+            <td></td>
+        `;
+        tbody.appendChild(headerRow);
+
+        // Члены команды
+        group.members.forEach(member => {
+            const memberRow = document.createElement('tr');
+            memberRow.className = 'team-member';
+            memberRow.innerHTML = `
+                <td></td>
+                <td></td>
+                <td style="padding-left: 30px;">↳ ${member}</td>
+                <td>-</td>
+                <td>-</td>
+                <td></td>
+            `;
+            tbody.appendChild(memberRow);
+        });
+    });
+}
+
+function displayMixedIndividualResults(results) {
+    const tbody = document.getElementById('results-tbody');
+
+    // Отображаем общий протокол всех участников без баллов
+    results.forEach(performance => {
+        const row = document.createElement('tr');
+
+        let placeClass = '';
+        if (performance.place === 1) placeClass = 'gold-place';
+        else if (performance.place === 2) placeClass = 'silver-place';
+        else if (performance.place === 3) placeClass = 'bronze-place';
+
+        let resultDisplay = performance.time_result || '-';
+        if (performance.time_result) {
+            resultDisplay = performance.time_result;
+        } else if (performance.original_result) {
+            resultDisplay = `${performance.original_result.toFixed(1)} очков`;
+        } else {
+            resultDisplay = '-';
+        }
+
+        // Добавляем пол к имени или в отдельную колонку
+        const studentNameWithGender = `${performance.student_name} (${performance.gender})`;
+
+        row.innerHTML = `
+            <td class="${placeClass}">${performance.place}</td>
+            <td>${performance.faculty_abbreviation}</td>
+            <td>${studentNameWithGender}</td>
+            <td>${resultDisplay}</td>
+            <td>-</td>
+            <td>
+                <button class="btn-delete" onclick="deleteResult(${performance.performance_id})">Удалить</button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
 }
 
 // Load rating
 async function loadRating() {
     try {
         let url = `${API_URL}/results/faculty-sport-rating/`;
+
+        // Добавляем параметры фильтрации
+        const params = [];
         if (currentSportType) {
-            url += `?sport_type_id=${currentSportType}`;
+            params.push(`sport_type_id=${currentSportType}`);
         }
+        if (currentGenderFilter) {
+            params.push(`gender=${currentGenderFilter}`);
+        }
+
+        if (params.length > 0) {
+            url += `?${params.join('&')}`;
+        }
+
+        console.log('Loading rating from:', url);
 
         const response = await fetch(url);
         if (!response.ok) {
-            const fallbackResponse = await fetch(`${API_URL}/results/spartakiada-rating/`);
+            // Fallback к общему рейтингу
+            const fallbackUrl = currentGenderFilter
+                ? `${API_URL}/results/faculty-sport-rating/?gender=${currentGenderFilter}`
+                : `${API_URL}/results/spartakiada-rating/`;
+
+            const fallbackResponse = await fetch(fallbackUrl);
             if (!fallbackResponse.ok) {
                 throw new Error(`HTTP error! status: ${fallbackResponse.status}`);
             }
@@ -281,15 +408,26 @@ function displayRating(ratings) {
             ratingList.appendChild(item);
         });
 
-        // Обновляем заголовок рейтинга
+        // Обновляем заголовок рейтинга с учетом фильтра по полу
         const ratingTitle = document.querySelector('.rating-panel h3');
         if (ratingTitle) {
+            let titleText = 'Баллы: ';
+
             if (currentSportType) {
                 const sportName = document.querySelector(`#sport-type option[value="${currentSportType}"]`)?.textContent || '';
-                ratingTitle.textContent = `Баллы: ${sportName}`;
+                titleText += sportName;
             } else {
-                ratingTitle.textContent = 'Баллы: Общий зачет';
+                titleText += 'Общий зачет';
             }
+
+            // Добавляем информацию о фильтре по полу
+            if (currentGenderFilter) {
+                titleText += ` (${currentGenderFilter === 'М' ? 'Мужчины' : 'Женщины'})`;
+            } else {
+                titleText += ' (Все)';
+            }
+
+            ratingTitle.textContent = titleText;
         }
     } else {
         console.error('Ratings is not an array:', ratings);

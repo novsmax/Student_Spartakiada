@@ -1,3 +1,4 @@
+# backend/app/models/results.py - ИСПРАВЛЕННАЯ ВЕРСИЯ без warnings
 from sqlalchemy import Column, Integer, Float, ForeignKey, UniqueConstraint, String, Table
 from sqlalchemy.orm import relationship
 from ..database import Base
@@ -11,15 +12,15 @@ class StudentPerformance(Base):
     sport_type_id = Column(Integer, ForeignKey("sport_types.id"))
     competition_id = Column(Integer, ForeignKey("competitions.id"))
     judge_id = Column(Integer, ForeignKey("judges.id"))
-    points = Column(Float, nullable=False)
+    points = Column(Float, nullable=False)  # Баллы за место (1-10 или 1)
     time_result = Column(String)  # For time-based results like "1:36:45"
+    original_result = Column(Float)  # Исходный результат (время в секундах, очки за игру и т.д.)
 
     # Relationships
     student = relationship("Student", back_populates="performances")
     sport_type = relationship("SportType", back_populates="performances")
     competition = relationship("Competition", back_populates="performances")
     judge = relationship("Judge", back_populates="performances")
-    faculty_result = relationship("FacultyCompetitionResult", secondary="faculty_result_performances")
 
     __table_args__ = (
         UniqueConstraint('student_id', 'competition_id', name='_student_competition_uc'),
@@ -46,8 +47,7 @@ class FacultyCompetitionResult(Base):
 
     faculty = relationship("Faculty", back_populates="competition_results")
     sport_type = relationship("SportType", back_populates="faculty_results")
-    performances = relationship("StudentPerformance", secondary=faculty_result_performances)
-    total_points_rel = relationship("FacultyTotalPoints", secondary="total_points_results")
+    performances = relationship("StudentPerformance", secondary=faculty_result_performances, overlaps="faculty_result")
 
     __table_args__ = (
         UniqueConstraint('faculty_id', 'sport_type_id', name='_faculty_sport_uc'),
@@ -72,4 +72,4 @@ class FacultyTotalPoints(Base):
 
     # Relationships
     faculty = relationship("Faculty", back_populates="total_points")
-    competition_results = relationship("FacultyCompetitionResult", secondary=total_points_results)
+    competition_results = relationship("FacultyCompetitionResult", secondary=total_points_results, overlaps="total_points_rel")

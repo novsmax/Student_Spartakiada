@@ -380,9 +380,53 @@ body {
     background-color: #f9f9f9;
 }
 
-.results-table th,
-.results-table td {
-    /* Эти стили больше не используются, заменены на table-header th и table-body td */
+/* Стили для сообщений в таблице */
+.no-sport-message,
+.no-results-message,
+.error-message {
+    text-align: center !important;
+    vertical-align: middle !important;
+    padding: 40px 20px !important;
+    font-size: 18px !important;
+    font-weight: bold !important;
+    color: #666 !important;
+    background-color: #f8f9fa !important;
+    border: none !important;
+}
+
+.no-sport-message {
+    color: #007bff !important;
+    background-color: #e3f2fd !important;
+}
+
+.no-results-message {
+    color: #28a745 !important;
+    background-color: #e8f5e9 !important;
+}
+
+.error-message {
+    color: #dc3545 !important;
+    background-color: #f8d7da !important;
+}
+
+/* Стили для заголовков по полу */
+.gender-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    color: white !important;
+    font-weight: bold !important;
+    border: none !important;
+}
+
+.gender-header:hover {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+}
+
+.gender-title {
+    text-align: center !important;
+    font-size: 18px !important;
+    padding: 15px !important;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+    letter-spacing: 1px;
 }
 
 .btn-delete {
@@ -476,13 +520,13 @@ body {
 
 /* Team sport styles */
 .team-header {
-    background-color: #e3f2fd;
+    background-color: #e3f2fd !important;
     font-weight: bold;
 }
 
 .team-member {
     font-style: italic;
-    background-color: #f8f9fa;
+    background-color: #f8f9fa !important;
 }
 
 /* Responsive design */
@@ -560,5 +604,18 @@ body {
     .table-body td {
         font-size: 14px;
         padding: 8px 4px;
+    }
+
+    /* Мобильные стили для сообщений */
+    .no-sport-message,
+    .no-results-message,
+    .error-message {
+        font-size: 16px !important;
+        padding: 30px 15px !important;
+    }
+
+    .gender-title {
+        font-size: 16px !important;
+        padding: 10px !important;
     }
 }
