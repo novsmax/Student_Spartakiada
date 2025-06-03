@@ -1,3 +1,4 @@
+# backend/app/schemas/student.py - ИСПРАВЛЕННАЯ ВЕРСИЯ
 from pydantic import BaseModel
 from typing import Optional
 from ..models.student import Gender
@@ -20,3 +21,18 @@ class StudentRead(StudentBase):
 
     class Config:
         from_attributes = True
+
+
+# НОВАЯ СХЕМА для поиска/создания студента
+class StudentFindOrCreateRequest(BaseModel):
+    faculty_abbreviation: str
+    full_name: str
+    gender: str
+
+
+class StudentFindOrCreateResponse(BaseModel):
+    student_id: int
+    student_name: str
+    faculty_id: int
+    faculty_name: str
+    created: bool

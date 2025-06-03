@@ -1,6 +1,16 @@
+// frontend/js/app.js - ИСПРАВЛЕННАЯ ВЕРСИЯ с отладкой
+
 const API_URL = 'http://localhost:8000/api';
 let currentSportType = null;
 let currentGenderFilter = '';
+
+// Глобальные переменные для UX
+let isAddingResult = false;
+let validationTimer = null;
+
+// ===========================================
+// ИНИЦИАЛИЗАЦИЯ И ОСНОВНЫЕ ФУНКЦИИ
+// ===========================================
 
 // Обработка кликов по кнопкам выбора пола
 function initGenderButtons() {
@@ -43,6 +53,7 @@ function initGenderButtons() {
 
 // Initialize the app
 document.addEventListener('DOMContentLoaded', async () => {
+    console.log('Инициализация приложения...');
     try {
         await loadSportTypes();
         await loadResults();
@@ -50,38 +61,56 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Инициализация кнопок выбора пола
         initGenderButtons();
+
+        // Инициализация валидации формы
+        initializeFormValidation();
+
+        console.log('Приложение успешно инициализировано');
+
     } catch (error) {
         console.error('Error initializing app:', error);
+        showInfoPanel('Ошибка инициализации приложения', 'error');
     }
 
     // Set up event listeners
     document.getElementById('sport-type').addEventListener('change', async (e) => {
         currentSportType = e.target.value ? parseInt(e.target.value) : null;
+        console.log('Выбран вид спорта:', currentSportType);
         await loadResults();
         await loadRating();
         updatePlaceInput();
+        updateResultInputPlaceholder();
     });
 
     // Gender filter event listeners
     document.querySelectorAll('input[name="filter-gender"]').forEach(radio => {
         radio.addEventListener('change', async (e) => {
             currentGenderFilter = e.target.value;
+            console.log('Выбран фильтр по полу:', currentGenderFilter);
             await loadResults();
             await loadRating();
         });
     });
+
+    // Инициализация подсказок
+    updateResultInputPlaceholder();
 });
+
+// ===========================================
+// ЗАГРУЗКА ДАННЫХ
+// ===========================================
 
 // Load sport types for dropdown
 async function loadSportTypes() {
     try {
+        console.log('Загрузка видов спорта...');
         const response = await fetch(`${API_URL}/competitions/sport-types/`);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
 
         const sportTypes = await response.json();
-        console.log('Sport types loaded:', sportTypes);
+        console.log('Виды спорта загружены:', sportTypes);
 
         const select = document.getElementById('sport-type');
         select.innerHTML = '<option value="">Вид соревнований</option>';
@@ -134,7 +163,7 @@ async function loadResults() {
             url += `&gender=${currentGenderFilter}`;
         }
 
-        console.log('Loading results from:', url);
+        console.log('Загрузка результатов с URL:', url);
 
         const response = await fetch(url);
         if (!response.ok) {
@@ -142,7 +171,7 @@ async function loadResults() {
         }
 
         const results = await response.json();
-        console.log('Results loaded:', results);
+        console.log('Результаты загружены:', results);
 
         tbody.innerHTML = '';
 
@@ -187,6 +216,10 @@ async function loadResults() {
     }
 }
 
+// ===========================================
+// ОТОБРАЖЕНИЕ РЕЗУЛЬТАТОВ
+// ===========================================
+
 function displayTeamResultsWithPoints(results) {
     const tbody = document.getElementById('results-tbody');
 
@@ -205,10 +238,10 @@ function displayTeamResultsWithPoints(results) {
         facultyGroups[facultyId].members.push(performance.student_name);
     });
 
-    // ДОБАВЛЕНО: Сортируем команды по баллам (больше баллов = лучше место)
+    // Сортируем команды по баллам (больше баллов = лучше место)
     const sortedGroups = Object.values(facultyGroups).sort((a, b) => b.points - a.points);
 
-    // ДОБАВЛЕНО: Пересчитываем места после сортировки
+    // Пересчитываем места после сортировки
     let currentPlace = 1;
     for (let i = 0; i < sortedGroups.length; i++) {
         if (i > 0 && sortedGroups[i].points !== sortedGroups[i - 1].points) {
@@ -291,7 +324,7 @@ function displayIndividualResultsWithPoints(results) {
 function displayMixedTeamResults(results) {
     const tbody = document.getElementById('results-tbody');
 
-    // ИСПРАВЛЕНО: данные уже приходят отсортированными с сервера,
+    // Данные уже приходят отсортированными с сервера,
     // просто группируем их сохраняя порядок
     const teamGroups = {};
     const teamOrder = []; // Массив для сохранения порядка команд
@@ -306,7 +339,7 @@ function displayMixedTeamResults(results) {
                 place: performance.place,
                 original_result: performance.original_result,
                 time_result: performance.time_result,
-                points: performance.points, // ИЗМЕНЕНО: получаем баллы из сервера
+                points: performance.points,
                 members: []
             };
             // Сохраняем порядок первого появления команды
@@ -315,7 +348,7 @@ function displayMixedTeamResults(results) {
         teamGroups[teamKey].members.push(performance.student_name);
     });
 
-    // ИСПРАВЛЕНО: отображаем команды в том порядке, в котором они пришли с сервера
+    // Отображаем команды в том порядке, в котором они пришли с сервера
     teamOrder.forEach(teamKey => {
         const group = teamGroups[teamKey];
 
@@ -400,6 +433,10 @@ function displayMixedIndividualResults(results) {
     });
 }
 
+// ===========================================
+// РЕЙТИНГ
+// ===========================================
+
 // Load rating
 async function loadRating() {
     try {
@@ -418,7 +455,7 @@ async function loadRating() {
             url += `?${params.join('&')}`;
         }
 
-        console.log('Loading rating from:', url);
+        console.log('Загрузка рейтинга с URL:', url);
 
         const response = await fetch(url);
         if (!response.ok) {
@@ -437,7 +474,7 @@ async function loadRating() {
         }
 
         const ratings = await response.json();
-        console.log('Ratings loaded:', ratings);
+        console.log('Рейтинг загружен:', ratings);
         displayRating(ratings);
 
     } catch (error) {
@@ -498,34 +535,535 @@ function displayRating(ratings) {
     }
 }
 
-// Add new result
-async function addResult() {
-    const institute = document.getElementById('institute-input').value;
-    const name = document.getElementById('name-input').value;
-    const result = document.getElementById('result-input').value;
-    const gender = document.querySelector('input[name="gender"]:checked').value;
+// ===========================================
+// ДОБАВЛЕНИЕ РЕЗУЛЬТАТОВ - HELPER ФУНКЦИИ
+// ===========================================
 
-    if (!institute || !name || !result) {
-        alert('Пожалуйста, заполните все поля');
-        return;
+// Функция для определения типа результата по виду спорта
+function getResultType(sportName) {
+    const timeBased = ['Бег', 'Плавание'];
+    const isTimeBased = timeBased.some(sport => sportName.includes(sport));
+    return isTimeBased ? 'time' : 'points';
+}
+
+// Функция для конвертации времени в секунды
+function timeToSeconds(timeString) {
+    try {
+        // Форматы: "12.34" (секунды), "1:23.45" (минуты:секунды), "1:23:45" (часы:минуты:секунды)
+        const parts = timeString.split(':');
+
+        if (parts.length === 1) {
+            // Только секунды
+            return parseFloat(parts[0]);
+        } else if (parts.length === 2) {
+            // Минуты:секунды
+            return parseInt(parts[0]) * 60 + parseFloat(parts[1]);
+        } else if (parts.length === 3) {
+            // Часы:минуты:секунды
+            return parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseFloat(parts[2]);
+        }
+
+        throw new Error('Неверный формат времени');
+    } catch (error) {
+        throw new Error('Неверный формат времени. Используйте: 12.34 или 1:23.45 или 1:23:45');
     }
+}
+
+// Функция для форматирования времени в стандартный вид
+function formatTime(timeString) {
+    try {
+        const totalSeconds = timeToSeconds(timeString);
+
+        if (totalSeconds < 60) {
+            // Меньше минуты - показываем как секунды
+            return `0:00:${totalSeconds.toFixed(2)}`;
+        } else if (totalSeconds < 3600) {
+            // Меньше часа - показываем минуты:секунды
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = (totalSeconds % 60).toFixed(2);
+            return `0:${minutes.toString().padStart(2, '0')}:${seconds.padStart(5, '0')}`;
+        } else {
+            // Час и больше - показываем часы:минуты:секунды
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = (totalSeconds % 60).toFixed(2);
+            return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.padStart(5, '0')}`;
+        }
+    } catch (error) {
+        return timeString; // Возвращаем как есть если не удалось распарсить
+    }
+}
+
+// Валидация результата
+function validateResult(result, resultType) {
+    if (!result || result.trim() === '') {
+        throw new Error('Результат не может быть пустым');
+    }
+
+    if (resultType === 'time') {
+        try {
+            timeToSeconds(result);
+        } catch (error) {
+            throw new Error('Неверный формат времени. Примеры: 12.34 (сек), 1:23.45 (мин:сек), 1:23:45 (час:мин:сек)');
+        }
+    } else {
+        const points = parseFloat(result);
+        if (isNaN(points) || points < 0) {
+            throw new Error('Результат должен быть положительным числом');
+        }
+    }
+}
+
+// ===========================================
+// UX ФУНКЦИИ
+// ===========================================
+
+// Функция для показа информационных сообщений
+function showInfoPanel(message, type = 'info', duration = 5000) {
+    const panel = document.getElementById('info-panel');
+    const text = document.getElementById('info-text');
+    const icon = document.querySelector('.info-icon');
+
+    if (!panel || !text || !icon) return;
+
+    // Очищаем предыдущие классы
+    panel.className = 'info-panel';
+
+    // Добавляем класс типа сообщения
+    if (type === 'success') {
+        panel.classList.add('success');
+        icon.textContent = '✅';
+    } else if (type === 'error') {
+        panel.classList.add('error');
+        icon.textContent = '❌';
+    } else {
+        icon.textContent = 'ℹ️';
+    }
+
+    text.textContent = message;
+    panel.style.display = 'block';
+
+    // Автоматически скрываем через заданное время
+    if (duration > 0) {
+        setTimeout(() => {
+            panel.style.display = 'none';
+        }, duration);
+    }
+}
+
+// Функция для установки состояния поля ввода
+function setFieldState(fieldId, state, message = '') {
+    const input = document.getElementById(fieldId);
+    if (!input) return;
+
+    const field = input.closest('.input-field');
+    const hint = field.querySelector('.input-hint');
+
+    // Очищаем предыдущие состояния
+    field.classList.remove('error', 'success');
+
+    if (state === 'error') {
+        field.classList.add('error');
+        if (hint && message) {
+            hint.textContent = message;
+            hint.style.color = '#e74c3c';
+        }
+    } else if (state === 'success') {
+        field.classList.add('success');
+        if (hint && message) {
+            hint.textContent = message;
+            hint.style.color = '#27ae60';
+        }
+    } else {
+        // Возвращаем исходное состояние
+        if (hint) {
+            updateFieldHint(fieldId);
+        }
+    }
+}
+
+// Обновление подсказок для полей
+function updateFieldHint(fieldId) {
+    const input = document.getElementById(fieldId);
+    if (!input) return;
+
+    const hint = input.closest('.input-field').querySelector('.input-hint');
+    if (!hint) return;
+
+    switch (fieldId) {
+        case 'institute-input':
+            hint.textContent = 'Введите сокращение института';
+            hint.style.color = '#666';
+            break;
+        case 'name-input':
+            hint.textContent = 'Формат: Фамилия Имя Отчество';
+            hint.style.color = '#666';
+            break;
+        case 'result-input':
+            updateResultInputHint();
+            break;
+    }
+}
+
+// Обновление подсказки для поля результата
+function updateResultInputHint() {
+    const input = document.getElementById('result-input');
+    if (!input) return;
+
+    const hint = input.closest('.input-field').querySelector('.input-hint');
+    if (!hint) return;
 
     if (!currentSportType) {
-        alert('Пожалуйста, выберите вид соревнований');
+        hint.textContent = 'Выберите вид спорта для формата';
+        hint.style.color = '#666';
         return;
     }
 
+    const sportTypeSelect = document.getElementById('sport-type');
+    const sportName = sportTypeSelect.options[sportTypeSelect.selectedIndex].text;
+    const resultType = getResultType(sportName);
+
+    if (resultType === 'time') {
+        hint.textContent = 'Время: 12.34 (сек) или 1:23.45 (мин:сек)';
+    } else {
+        hint.textContent = 'Очки: положительное число (например, 85.5)';
+    }
+    hint.style.color = '#666';
+}
+
+// Валидация полей в реальном времени
+function validateField(fieldId, value) {
+    switch (fieldId) {
+        case 'institute-input':
+            if (!value.trim()) {
+                setFieldState(fieldId, 'error', 'Институт обязателен');
+                return false;
+            }
+            const validInstitutes = ['ИМИТ', 'ИЛГИСН', 'ФТИ', 'МЕДИН', 'ИИИТ'];
+            if (!validInstitutes.includes(value.trim().toUpperCase())) {
+                setFieldState(fieldId, 'error', 'Используйте: ИМИТ, ИЛГИСН, ФТИ, МедИН, ИИИТ');
+                return false;
+            }
+            setFieldState(fieldId, 'success', '✓ Институт корректен');
+            return true;
+
+        case 'name-input':
+            if (!value.trim()) {
+                setFieldState(fieldId, 'error', 'Имя участника обязательно');
+                return false;
+            }
+            const nameParts = value.trim().split(/\s+/);
+            if (nameParts.length < 2) {
+                setFieldState(fieldId, 'error', 'Введите минимум фамилию и имя');
+                return false;
+            }
+            setFieldState(fieldId, 'success', `✓ ${nameParts.length} слов(а)`);
+            return true;
+
+        case 'result-input':
+            if (!value.trim()) {
+                setFieldState(fieldId, 'error', 'Результат обязателен');
+                return false;
+            }
+
+            if (!currentSportType) {
+                setFieldState(fieldId, 'error', 'Сначала выберите вид спорта');
+                return false;
+            }
+
+            try {
+                const sportTypeSelect = document.getElementById('sport-type');
+                const sportName = sportTypeSelect.options[sportTypeSelect.selectedIndex].text;
+                const resultType = getResultType(sportName);
+                validateResult(value, resultType);
+
+                if (resultType === 'time') {
+                    const formatted = formatTime(value);
+                    setFieldState(fieldId, 'success', `✓ Время: ${formatted}`);
+                } else {
+                    setFieldState(fieldId, 'success', `✓ Очки: ${parseFloat(value)}`);
+                }
+                return true;
+            } catch (error) {
+                setFieldState(fieldId, 'error', error.message);
+                return false;
+            }
+    }
+    return true;
+}
+
+// Функция для управления состоянием кнопки добавления
+function setAddButtonState(loading = false) {
+    const button = document.getElementById('add-result-btn');
+    if (!button) return;
+
+    const textSpan = button.querySelector('.btn-text');
+    const spinner = button.querySelector('.btn-spinner');
+
+    if (loading) {
+        button.disabled = true;
+        if (textSpan) textSpan.style.display = 'none';
+        if (spinner) spinner.style.display = 'inline-flex';
+        isAddingResult = true;
+    } else {
+        button.disabled = false;
+        if (textSpan) textSpan.style.display = 'inline';
+        if (spinner) spinner.style.display = 'none';
+        isAddingResult = false;
+    }
+}
+
+// Инициализация обработчиков событий для валидации в реальном времени
+function initializeFormValidation() {
+    // Валидация института
+    const instituteInput = document.getElementById('institute-input');
+    if (instituteInput) {
+        instituteInput.addEventListener('input', (e) => {
+            clearTimeout(validationTimer);
+            validationTimer = setTimeout(() => {
+                validateField('institute-input', e.target.value);
+            }, 500);
+        });
+
+        instituteInput.addEventListener('blur', (e) => {
+            validateField('institute-input', e.target.value);
+        });
+    }
+
+    // Валидация имени
+    const nameInput = document.getElementById('name-input');
+    if (nameInput) {
+        nameInput.addEventListener('input', (e) => {
+            clearTimeout(validationTimer);
+            validationTimer = setTimeout(() => {
+                validateField('name-input', e.target.value);
+            }, 500);
+        });
+
+        nameInput.addEventListener('blur', (e) => {
+            validateField('name-input', e.target.value);
+        });
+    }
+
+    // Валидация результата
+    const resultInput = document.getElementById('result-input');
+    if (resultInput) {
+        resultInput.addEventListener('input', (e) => {
+            clearTimeout(validationTimer);
+            validationTimer = setTimeout(() => {
+                validateField('result-input', e.target.value);
+            }, 500);
+        });
+
+        resultInput.addEventListener('blur', (e) => {
+            validateField('result-input', e.target.value);
+        });
+    }
+}
+
+// Обновление плейсхолдера для поля результата
+function updateResultInputPlaceholder() {
+    const resultInput = document.getElementById('result-input');
+    if (!resultInput) return;
+
+    if (!currentSportType) {
+        resultInput.placeholder = 'Выберите вид спорта';
+        updateResultInputHint();
+        return;
+    }
+
+    const sportTypeSelect = document.getElementById('sport-type');
+    const sportName = sportTypeSelect.options[sportTypeSelect.selectedIndex].text;
+    const resultType = getResultType(sportName);
+
+    if (resultType === 'time') {
+        resultInput.placeholder = 'Время: 12.34 или 1:23.45';
+    } else {
+        resultInput.placeholder = 'Очки: 85.5';
+    }
+
+    updateResultInputHint();
+
+    // Перевалидируем результат если он уже введен
+    if (resultInput.value.trim()) {
+        validateField('result-input', resultInput.value);
+    }
+}
+
+// ===========================================
+// ДОБАВЛЕНИЕ РЕЗУЛЬТАТОВ - ОСНОВНАЯ ФУНКЦИЯ
+// ===========================================
+
+// Основная функция добавления результата
+async function addResult() {
+    if (isAddingResult) return;
+
+    const institute = document.getElementById('institute-input').value.trim().toUpperCase();
+    const name = document.getElementById('name-input').value.trim();
+    const result = document.getElementById('result-input').value.trim();
+    const gender = document.querySelector('input[name="gender"]:checked').value;
+
+    console.log('=== НАЧАЛО ДОБАВЛЕНИЯ РЕЗУЛЬТАТА ===');
+    console.log('Данные формы:', { institute, name, result, gender, currentSportType });
+
     try {
-        // TODO: Implement actual API call to add result
-        alert('Функция добавления результата требует реализации API endpoint');
+        // Валидация всех полей
+        const instituteValid = validateField('institute-input', institute);
+        const nameValid = validateField('name-input', name);
+        const resultValid = validateField('result-input', result);
+
+        if (!currentSportType) {
+            showInfoPanel('Пожалуйста, выберите вид соревнований', 'error');
+            return;
+        }
+
+        if (!instituteValid || !nameValid || !resultValid) {
+            showInfoPanel('Исправьте ошибки в форме перед отправкой', 'error');
+            return;
+        }
+
+        // Начинаем процесс добавления
+        setAddButtonState(true);
+        showInfoPanel('Добавление результата...', 'info', 0);
+
+        // Получаем информацию о виде спорта
+        const sportTypeSelect = document.getElementById('sport-type');
+        const sportName = sportTypeSelect.options[sportTypeSelect.selectedIndex].text;
+        const resultType = getResultType(sportName);
+
+        console.log('Тип результата:', resultType, 'для вида спорта:', sportName);
+
+        // 1. Поиск/создание студента
+        showInfoPanel('Поиск участника в базе данных...', 'info', 0);
+
+        const studentRequestData = {
+            faculty_abbreviation: institute,
+            full_name: name,
+            gender: gender
+        };
+
+        console.log('Отправка запроса на поиск/создание студента:', studentRequestData);
+
+        const studentResponse = await fetch(`${API_URL}/students/find-or-create/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(studentRequestData)
+        });
+
+        console.log('Ответ от студенческого API:', studentResponse.status);
+
+        if (!studentResponse.ok) {
+            const errorData = await studentResponse.json();
+            console.error('Ошибка от студенческого API:', errorData);
+            throw new Error(errorData.detail || 'Ошибка при поиске/создании студента');
+        }
+
+        const studentData = await studentResponse.json();
+        console.log('Данные студента получены:', studentData);
+
+        // 2. Получение соревнования
+        showInfoPanel('Поиск соревнования...', 'info', 0);
+        const competitionResponse = await fetch(`${API_URL}/competitions/by-sport/${currentSportType}`);
+
+        console.log('Ответ от API соревнований:', competitionResponse.status);
+
+        if (!competitionResponse.ok) {
+            throw new Error('Соревнование по данному виду спорта не найдено');
+        }
+
+        const competitionData = await competitionResponse.json();
+        console.log('Данные соревнования получены:', competitionData);
+
+        // 3. Получение судьи
+        showInfoPanel('Назначение судьи...', 'info', 0);
+        const judgeResponse = await fetch(`${API_URL}/students/judges/?sport_type_id=${currentSportType}`);
+
+        console.log('Ответ от API судей:', judgeResponse.status);
+
+        if (!judgeResponse.ok) {
+            throw new Error('Судья для данного вида спорта не найден');
+        }
+
+        const judges = await judgeResponse.json();
+        console.log('Данные судей получены:', judges);
+
+        if (judges.length === 0) {
+            throw new Error('Судья для данного вида спорта не найден');
+        }
+
+        const judge = judges[0];
+
+        // 4. Подготовка данных
+        let performanceData = {
+            student_id: studentData.student_id,
+            sport_type_id: currentSportType,
+            competition_id: competitionData.id,
+            judge_id: judge.id
+        };
+
+        if (resultType === 'time') {
+            performanceData.time_result = formatTime(result);
+            performanceData.original_result = timeToSeconds(result);
+        } else {
+            performanceData.original_result = parseFloat(result);
+            performanceData.time_result = null;
+        }
+
+        console.log('Подготовленные данные для создания результата:', performanceData);
+
+        // 5. Создание результата
+        showInfoPanel('Сохранение результата...', 'info', 0);
+        const performanceResponse = await fetch(`${API_URL}/results/performances/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(performanceData)
+        });
+
+        console.log('Ответ от API результатов:', performanceResponse.status);
+
+        if (!performanceResponse.ok) {
+            const errorData = await performanceResponse.json();
+            console.error('Ошибка от API результатов:', errorData);
+            if (errorData.detail && errorData.detail.includes('already exists')) {
+                throw new Error('Результат для этого участника уже существует');
+            }
+            throw new Error(errorData.detail || 'Ошибка при создании результата выступления');
+        }
+
+        const performanceResult = await performanceResponse.json();
+        console.log('Результат успешно создан:', performanceResult);
+
+        // Успех!
+        let successMessage = 'Результат успешно добавлен!';
+        if (studentData.created) {
+            successMessage += ` Участник "${name}" добавлен в систему.`;
+        }
+
+        showInfoPanel(successMessage, 'success');
+
+        // Очищаем форму и обновляем данные
         clearInputs();
         await loadResults();
         await loadRating();
+
+        console.log('=== РЕЗУЛЬТАТ УСПЕШНО ДОБАВЛЕН ===');
+
     } catch (error) {
-        console.error('Error adding result:', error);
-        alert('Ошибка при добавлении результата');
+        console.error('=== ОШИБКА ПРИ ДОБАВЛЕНИИ РЕЗУЛЬТАТА ===');
+        console.error('Детали ошибки:', error);
+        showInfoPanel(`Ошибка: ${error.message}`, 'error', 8000);
+    } finally {
+        setAddButtonState(false);
     }
 }
+
+// ===========================================
+// УДАЛЕНИЕ И ОЧИСТКА
+// ===========================================
 
 // Delete result
 async function deleteResult(performanceId) {
@@ -541,23 +1079,45 @@ async function deleteResult(performanceId) {
         if (response.ok) {
             await loadResults();
             await loadRating();
+            showInfoPanel('Результат успешно удален', 'success');
         } else {
-            alert('Ошибка при удалении результата');
+            throw new Error('Ошибка при удалении результата');
         }
     } catch (error) {
         console.error('Error deleting result:', error);
-        alert('Ошибка при удалении результата');
+        showInfoPanel('Ошибка при удалении результата', 'error');
     }
 }
 
 // Clear input fields
 function clearInputs() {
-    document.getElementById('institute-input').value = '';
-    document.getElementById('name-input').value = '';
-    document.getElementById('result-input').value = '';
-    document.querySelector('input[name="gender"][value="М"]').checked = true;
+    const instituteInput = document.getElementById('institute-input');
+    const nameInput = document.getElementById('name-input');
+    const resultInput = document.getElementById('result-input');
+    const maleRadio = document.querySelector('input[name="gender"][value="М"]');
+
+    if (instituteInput) instituteInput.value = '';
+    if (nameInput) nameInput.value = '';
+    if (resultInput) resultInput.value = '';
+    if (maleRadio) maleRadio.checked = true;
+
+    // Очищаем состояния полей
+    ['institute-input', 'name-input', 'result-input'].forEach(fieldId => {
+        setFieldState(fieldId, 'normal');
+    });
+
+    // Скрываем информационную панель
+    const infoPanel = document.getElementById('info-panel');
+    if (infoPanel) {
+        infoPanel.style.display = 'none';
+    }
+
     updatePlaceInput();
 }
+
+// ===========================================
+// НАВИГАЦИЯ
+// ===========================================
 
 // Navigation functions
 function showRating() {

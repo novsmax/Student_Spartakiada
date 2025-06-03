@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException
+# backend/app/api/competitions.py - ОБНОВЛЕННАЯ ВЕРСИЯ
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 
 from ..database import get_db
 from ..models import Competition, SportType, Team, Faculty, Group
@@ -19,10 +20,35 @@ def get_sport_types(db: Session = Depends(get_db)):
 def get_competitions(
         skip: int = 0,
         limit: int = 100,
+        sport_type_id: Optional[int] = Query(None),
         db: Session = Depends(get_db)
 ):
-    competitions = db.query(Competition).offset(skip).limit(limit).all()
+    query = db.query(Competition)
+
+    if sport_type_id:
+        query = query.filter(Competition.sport_type_id == sport_type_id)
+
+    competitions = query.offset(skip).limit(limit).all()
     return competitions
+
+
+@router.get("/by-sport/{sport_type_id}")
+def get_competition_by_sport(sport_type_id: int, db: Session = Depends(get_db)):
+    """Получить активное соревнование по виду спорта"""
+    competition = db.query(Competition).filter(
+        Competition.sport_type_id == sport_type_id
+    ).first()
+
+    if not competition:
+        raise HTTPException(status_code=404, detail="Соревнование не найдено")
+
+    return {
+        "id": competition.id,
+        "name": competition.name,
+        "sport_type_id": competition.sport_type_id,
+        "date": competition.date,
+        "location": competition.location
+    }
 
 
 @router.post("/", response_model=CompetitionRead)
