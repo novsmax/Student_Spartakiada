@@ -1,4 +1,4 @@
-# backend/app/api/results.py - ВЕРСИЯ с общим протоколом при "Все"
+# backend/app/api/results.py - ИСПРАВЛЕННАЯ ВЕРСИЯ с правильным группированием команд по полу
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload, selectinload
 from sqlalchemy import func, and_, desc, asc
@@ -148,7 +148,7 @@ def get_competition_results(
 ):
     """
     Получить результаты соревнований
-    При gender=None показывает общий протокол с абсолютными результатами
+    При gender=None показывает общий протокол с абсолютными результатами И баллами
     При gender=М/Ж показывает раздельный подсчет с баллами за места
     """
     # Базовый запрос
@@ -186,7 +186,7 @@ def get_competition_results(
     if gender:
         # РАЗДЕЛЬНЫЙ ПОДСЧЕТ ПО ПОЛУ - показываем баллы за места внутри пола
         if is_team and sport_type_id:
-            # Командные виды спорта для одного пола
+            # Командные виды спорта для одного пола - группируем по факультетам
             faculty_performances = {}
             for perf in performances:
                 faculty_id = perf.student.group.faculty_id
@@ -285,11 +285,12 @@ def get_competition_results(
                     "original_result": performance.original_result
                 })
     else:
-        # ОБЩИЙ ПРОТОКОЛ - показываем абсолютные результаты без разделения по полу
+        # ОБЩИЙ ПРОТОКОЛ - показываем абсолютные результаты И баллы
         if is_team and sport_type_id:
-            # Командные виды спорта - общий протокол команд
+            # Командные виды спорта - ИСПРАВЛЕНО: группируем по факультету И полу
             faculty_performances = {}
             for perf in performances:
+                # КЛЮЧЕВОЕ ИЗМЕНЕНИЕ: группируем по факультету И полу
                 faculty_gender_key = f"{perf.student.group.faculty_id}_{perf.student.gender.value}"
                 if faculty_gender_key not in faculty_performances:
                     faculty_performances[faculty_gender_key] = {
@@ -297,7 +298,8 @@ def get_competition_results(
                         'gender': perf.student.gender.value,
                         'performances': [],
                         'original_result': perf.original_result,
-                        'time_result': perf.time_result
+                        'time_result': perf.time_result,
+                        'points': perf.points
                     }
                 faculty_performances[faculty_gender_key]['performances'].append(perf)
 
@@ -328,6 +330,7 @@ def get_competition_results(
                         if (data['original_result'] or 0) != (prev_data['original_result'] or 0):
                             current_place = i + 1
 
+                # ИСПРАВЛЕНО: показываем команду с указанием пола
                 team_name = f"{data['faculty'].abbreviation} ({data['gender']})"
 
                 for perf in data['performances']:
@@ -340,12 +343,12 @@ def get_competition_results(
                         "place": current_place,
                         "faculty_id": data['faculty'].id,
                         "faculty_name": data['faculty'].name,
-                        "faculty_abbreviation": team_name,  # Показываем пол в названии команды
+                        "faculty_abbreviation": team_name,  # Команда с указанием пола
                         "student_id": student.id,
                         "student_name": student_name,
                         "gender": student.gender.value,
                         "time_result": perf.time_result,
-                        "points": 0,  # В общем протоколе не показываем баллы
+                        "points": perf.points,
                         "performance_id": perf.id,
                         "sport_type_id": perf.sport_type_id,
                         "sport_type_name": perf.sport_type.name,
@@ -386,16 +389,19 @@ def get_competition_results(
                 if student.middle_name:
                     student_name += f"{student.middle_name[0]}."
 
+                # Добавляем пол к имени
+                student_name_with_gender = f"{student_name} ({student.gender.value})"
+
                 results.append({
                     "place": current_place,
                     "faculty_id": faculty.id,
                     "faculty_name": faculty.name,
                     "faculty_abbreviation": faculty.abbreviation,
                     "student_id": student.id,
-                    "student_name": student_name,
+                    "student_name": student_name_with_gender,
                     "gender": student.gender.value,
                     "time_result": performance.time_result,
-                    "points": 0,  # В общем протоколе не показываем баллы
+                    "points": performance.points,
                     "performance_id": performance.id,
                     "sport_type_id": performance.sport_type_id,
                     "sport_type_name": performance.sport_type.name,

@@ -2,12 +2,54 @@ const API_URL = 'http://localhost:8000/api';
 let currentSportType = null;
 let currentGenderFilter = '';
 
+// Обработка кликов по кнопкам выбора пола
+function initGenderButtons() {
+    const genderLabels = document.querySelectorAll('.gender-filter label');
+    const genderRadios = document.querySelectorAll('input[name="filter-gender"]');
+
+    // Функция для обновления активных классов
+    function updateActiveClasses() {
+        genderLabels.forEach(label => {
+            label.classList.remove('active');
+        });
+
+        const checkedRadio = document.querySelector('input[name="filter-gender"]:checked');
+        if (checkedRadio) {
+            checkedRadio.closest('label').classList.add('active');
+        }
+    }
+
+    // Обработчик для радио-кнопок
+    genderRadios.forEach(radio => {
+        radio.addEventListener('change', updateActiveClasses);
+    });
+
+    // Обработчик для кликов по лейблам
+    genderLabels.forEach(label => {
+        label.addEventListener('click', function() {
+            const radio = this.querySelector('input[type="radio"]');
+            if (radio) {
+                radio.checked = true;
+                updateActiveClasses();
+                // Запускаем событие change для радио-кнопки
+                radio.dispatchEvent(new Event('change'));
+            }
+        });
+    });
+
+    // Инициализация начального состояния
+    updateActiveClasses();
+}
+
 // Initialize the app
 document.addEventListener('DOMContentLoaded', async () => {
     try {
         await loadSportTypes();
         await loadResults();
         await loadRating();
+
+        // Инициализация кнопок выбора пола
+        initGenderButtons();
     } catch (error) {
         console.error('Error initializing app:', error);
     }
@@ -123,7 +165,7 @@ async function loadResults() {
                     displayIndividualResultsWithPoints(results);
                 }
             } else {
-                // ОБЩИЙ ПРОТОКОЛ - показываем абсолютные результаты без заголовков по полу
+                // ОБЩИЙ ПРОТОКОЛ - показываем абсолютные результаты С баллами
                 if (isTeamSport) {
                     displayMixedTeamResults(results);
                 } else {
@@ -148,7 +190,7 @@ async function loadResults() {
 function displayTeamResultsWithPoints(results) {
     const tbody = document.getElementById('results-tbody');
 
-    // Группируем по факультетам
+    // Группируем по факультетам (в рамках одного пола)
     const facultyGroups = {};
     results.forEach(performance => {
         const facultyId = performance.faculty_id;
@@ -163,8 +205,20 @@ function displayTeamResultsWithPoints(results) {
         facultyGroups[facultyId].members.push(performance.student_name);
     });
 
-    // Отображаем командные результаты с баллами
-    Object.values(facultyGroups).forEach(group => {
+    // ДОБАВЛЕНО: Сортируем команды по баллам (больше баллов = лучше место)
+    const sortedGroups = Object.values(facultyGroups).sort((a, b) => b.points - a.points);
+
+    // ДОБАВЛЕНО: Пересчитываем места после сортировки
+    let currentPlace = 1;
+    for (let i = 0; i < sortedGroups.length; i++) {
+        if (i > 0 && sortedGroups[i].points !== sortedGroups[i - 1].points) {
+            currentPlace = i + 1;
+        }
+        sortedGroups[i].place = currentPlace;
+    }
+
+    // Отображаем командные результаты с баллами в правильном порядке
+    sortedGroups.forEach(group => {
         let placeClass = '';
         if (group.place === 1) placeClass = 'gold-place';
         else if (group.place === 2) placeClass = 'silver-place';
@@ -237,24 +291,34 @@ function displayIndividualResultsWithPoints(results) {
 function displayMixedTeamResults(results) {
     const tbody = document.getElementById('results-tbody');
 
-    // Группируем по командам (факультет + пол)
+    // ИСПРАВЛЕНО: данные уже приходят отсортированными с сервера,
+    // просто группируем их сохраняя порядок
     const teamGroups = {};
+    const teamOrder = []; // Массив для сохранения порядка команд
+
     results.forEach(performance => {
-        const teamKey = performance.faculty_abbreviation; // Уже содержит пол в скобках
+        // faculty_abbreviation уже содержит пол в скобках с сервера
+        const teamKey = performance.faculty_abbreviation;
+
         if (!teamGroups[teamKey]) {
             teamGroups[teamKey] = {
                 team_name: teamKey,
                 place: performance.place,
                 original_result: performance.original_result,
                 time_result: performance.time_result,
+                points: performance.points, // ИЗМЕНЕНО: получаем баллы из сервера
                 members: []
             };
+            // Сохраняем порядок первого появления команды
+            teamOrder.push(teamKey);
         }
         teamGroups[teamKey].members.push(performance.student_name);
     });
 
-    // Отображаем командные результаты без баллов
-    Object.values(teamGroups).forEach(group => {
+    // ИСПРАВЛЕНО: отображаем команды в том порядке, в котором они пришли с сервера
+    teamOrder.forEach(teamKey => {
+        const group = teamGroups[teamKey];
+
         let placeClass = '';
         if (group.place === 1) placeClass = 'gold-place';
         else if (group.place === 2) placeClass = 'silver-place';
@@ -276,7 +340,7 @@ function displayMixedTeamResults(results) {
             <td class="${placeClass}">${group.place}</td>
             <td colspan="2">${group.team_name}</td>
             <td>${resultDisplay}</td>
-            <td>-</td>
+            <td>${group.points ? group.points.toFixed(0) : '-'}</td>
             <td></td>
         `;
         tbody.appendChild(headerRow);
@@ -290,7 +354,7 @@ function displayMixedTeamResults(results) {
                 <td></td>
                 <td style="padding-left: 30px;">↳ ${member}</td>
                 <td>-</td>
-                <td>-</td>
+                <td>${group.points ? group.points.toFixed(0) : '-'}</td>
                 <td></td>
             `;
             tbody.appendChild(memberRow);
@@ -301,7 +365,7 @@ function displayMixedTeamResults(results) {
 function displayMixedIndividualResults(results) {
     const tbody = document.getElementById('results-tbody');
 
-    // Отображаем общий протокол всех участников без баллов
+    // Отображаем общий протокол всех участников с баллами
     results.forEach(performance => {
         const row = document.createElement('tr');
 
@@ -319,15 +383,15 @@ function displayMixedIndividualResults(results) {
             resultDisplay = '-';
         }
 
-        // Добавляем пол к имени или в отдельную колонку
-        const studentNameWithGender = `${performance.student_name} (${performance.gender})`;
+        // student_name уже содержит пол в скобках с сервера
+        const studentNameWithGender = performance.student_name;
 
         row.innerHTML = `
             <td class="${placeClass}">${performance.place}</td>
             <td>${performance.faculty_abbreviation}</td>
             <td>${studentNameWithGender}</td>
             <td>${resultDisplay}</td>
-            <td>-</td>
+            <td>${performance.points ? performance.points.toFixed(0) : '-'}</td>
             <td>
                 <button class="btn-delete" onclick="deleteResult(${performance.performance_id})">Удалить</button>
             </td>

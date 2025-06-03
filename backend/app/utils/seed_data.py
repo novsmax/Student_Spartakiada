@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 import random
+from sqlalchemy import text
 from ..database import SessionLocal, engine, Base
 from ..models import *
 from ..api.auth import get_password_hash
@@ -66,13 +67,32 @@ def seed_database():
     db = SessionLocal()
 
     try:
-        # Очистка существующих данных
+        # Очистка существующих данных в правильном порядке
         print("Очистка существующих данных...")
+
+        # Сначала удаляем данные из таблиц, которые ссылаются на другие таблицы
         db.query(StudentPerformance).delete()
         db.query(FacultyCompetitionResult).delete()
         db.query(FacultyTotalPoints).delete()
-        db.query(Team).delete()
+
+        # Очищаем связующие таблицы many-to-many напрямую
+        print("Очистка связующих таблиц...")
+
+        # Очистка team_students
+        db.execute(text("DELETE FROM team_students"))
+
+        # Очистка competition_teams
+        db.execute(text("DELETE FROM competition_teams"))
+
+        # Очистка faculty_result_performances
+        db.execute(text("DELETE FROM faculty_result_performances"))
+
+        # Очистка total_points_results
+        db.execute(text("DELETE FROM total_points_results"))
+
+        # Теперь можно безопасно удалить основные таблицы
         db.query(Competition).delete()
+        db.query(Team).delete()
         db.query(Student).delete()
         db.query(Teacher).delete()
         db.query(Judge).delete()
@@ -80,7 +100,9 @@ def seed_database():
         db.query(SportType).delete()
         db.query(Faculty).delete()
         db.query(User).delete()
+
         db.commit()
+        print("Данные успешно очищены")
 
         # Create faculties
         print("Создание факультетов...")
