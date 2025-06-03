@@ -78,62 +78,91 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        <!-- Header with logo and navigation -->
-        <header class="header">
-            <div class="logo">
-                <svg width="80" height="80" viewBox="0 0 80 80">
-                    <!-- Stylized sports figures -->
-                    <circle cx="20" cy="20" r="8" fill="#2196F3"/>
-                    <path d="M10 30 Q20 25 30 30 L28 50 L12 50 Z" fill="#2196F3"/>
+    <!-- Header with logo and navigation -->
+    <header class="header">
+        <div class="logo">
+            <img src="images/logo.png" alt="Логотип Спартакиады" width="80" height="80">
+        </div>
+        <nav class="navigation">
+            <button class="nav-button" onclick="showRating()">
+                Рейтинг<br>Спартакиады
+            </button>
+            <button class="nav-button active" onclick="showResults()">
+                Результаты<br>Соревнований
+            </button>
+            <button class="nav-button" onclick="showSchedule()">
+                Расписание<br>Соревнований
+            </button>
+        </nav>
+    </header>
 
-                    <circle cx="60" cy="20" r="8" fill="#4CAF50"/>
-                    <path d="M50 30 Q60 25 70 30 L68 50 L52 50 Z" fill="#4CAF50"/>
+    <!-- Main grid container -->
+    <div class="grid-container">
+        <!-- Page title (spans full width) -->
+        <div class="page-title-grid">
+            <h1>Результаты соревнований</h1>
+        </div>
 
-                    <circle cx="40" cy="35" r="8" fill="#FF9800"/>
-                    <path d="M30 45 Q40 40 50 45 L48 65 L32 65 Z" fill="#FF9800"/>
+        <!-- Left sidebar -->
+        <div class="sidebar-grid">
+            <!-- Sport type filter -->
+            <div class="filter-group">
+                <label for="sport-type">Вид соревнований</label>
+                <select id="sport-type" class="filter-select">
+                    <option value="">Все виды</option>
+                </select>
 
-                    <path d="M5 70 Q40 60 75 70" stroke="#F44336" stroke-width="3" fill="none"/>
-                </svg>
-            </div>
-            <nav class="navigation">
-                <button class="nav-button" onclick="showRating()">
-                    Рейтинг<br>Спартакиады
-                </button>
-                <button class="nav-button active" onclick="showResults()">
-                    Результаты<br>Соревнований
-                </button>
-                <button class="nav-button" onclick="showSchedule()">
-                    Расписание<br>Соревнований
-                </button>
-            </nav>
-        </header>
-
-        <!-- Main content -->
-        <main class="main-content">
-            <h1 class="page-title">Результаты соревнований</h1>
-
-            <!-- Filters and controls -->
-            <div class="controls">
-                <div class="filter-group">
-                    <label for="sport-type">Вид соревнований</label>
-                    <select id="sport-type" class="filter-select">
-                        <option value="">Все виды</option>
-                    </select>
+                <label class="gender-filter-label">Пол участников</label>
+                <div class="gender-filter">
+                    <label>
+                        <input type="radio" name="filter-gender" value="" checked> Все
+                    </label>
+                    <label>
+                        <input type="radio" name="filter-gender" value="М"> М
+                    </label>
+                    <label>
+                        <input type="radio" name="filter-gender" value="Ж"> Ж
+                    </label>
                 </div>
+            </div>
 
-                <div class="input-group">
-                    <input type="text" id="institute-input" placeholder="Введите Институт" style="width: 150px;">
-                    <input type="text" id="name-input" placeholder="Введите Имя" style="width: 200px;">
-                    <input type="text" id="result-input" placeholder="Введите Результат" style="width: 180px;">
+            <!-- Rating panel -->
+            <div class="rating-panel">
+                <h2>Рейтинг</h2>
+                <h3>Баллы: Общий зачет</h3>
+                <div class="rating-list" id="rating-list">
+                    <!-- Rating will be loaded here -->
+                </div>
+            </div>
+        </div>
 
-                    <div class="gender-select">
-                        <label>
-                            <input type="radio" name="gender" value="М" checked> М
-                        </label>
-                        <label>
-                            <input type="radio" name="gender" value="Ж"> Ж
-                        </label>
+        <!-- Main content area -->
+        <div class="main-content-grid">
+            <!-- Input controls -->
+            <div class="controls">
+                <div class="input-grid">
+                    <div class="input-field">
+                        <label>Институт</label>
+                        <input type="text" id="institute-input" placeholder="Введите Институт">
+                    </div>
+                    <div class="input-field">
+                        <label>Имя</label>
+                        <input type="text" id="name-input" placeholder="Введите Имя">
+                    </div>
+                    <div class="input-field">
+                        <label>Результат</label>
+                        <input type="text" id="result-input" placeholder="Введите Результат">
+                    </div>
+                    <div class="input-field">
+                        <label>Пол</label>
+                        <div class="gender-select">
+                            <label>
+                                <input type="radio" name="gender" value="М" checked> М
+                            </label>
+                            <label>
+                                <input type="radio" name="gender" value="Ж"> Ж
+                            </label>
+                        </div>
                     </div>
                 </div>
 
@@ -145,34 +174,45 @@
 
             <!-- Results table -->
             <div class="results-container">
-                <table class="results-table">
-                    <thead>
-                        <tr>
-                            <th style="width: 60px;">Место</th>
-                            <th style="width: 100px;">Институт</th>
-                            <th>Имя</th>
-                            <th style="width: 150px;">Результат</th>
-                            <th style="width: 120px;">Полученный балл</th>
-                            <th style="width: 100px;">Действия</th>
-                        </tr>
-                    </thead>
-                    <tbody id="results-tbody">
-                        <!-- Results will be loaded here -->
-                    </tbody>
-                </table>
-            </div>
-        </main>
-
-        <!-- Sidebar with rating -->
-        <aside class="sidebar">
-            <div class="rating-panel">
-                <h2>Рейтинг</h2>
-                <h3>Баллы: Общий зачет</h3>
-                <div class="rating-list" id="rating-list">
-                    <!-- Rating will be loaded here -->
+                <div class="results-table">
+                    <table class="table-header">
+                        <colgroup>
+                            <col style="width: 60px;">
+                            <col style="width: 100px;">
+                            <col style="width: 200px;">
+                            <col style="width: 150px;">
+                            <col style="width: 120px;">
+                            <col style="width: 100px;">
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th>Место</th>
+                                <th>Институт</th>
+                                <th>Имя</th>
+                                <th>Результат</th>
+                                <th>Полученный балл</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                    </table>
+                    <div class="table-body-container">
+                        <table class="table-body">
+                            <colgroup>
+                                <col style="width: 60px;">
+                                <col style="width: 100px;">
+                                <col style="width: 200px;">
+                                <col style="width: 150px;">
+                                <col style="width: 120px;">
+                                <col style="width: 100px;">
+                            </colgroup>
+                            <tbody id="results-tbody">
+                                <!-- Results will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
-        </aside>
+        </div>
     </div>
 
     <script src="js/app.js"></script>
