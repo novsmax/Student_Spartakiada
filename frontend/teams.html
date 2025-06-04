@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Редактирование команд</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <header class="header">
+        <div class="logo">
+            <img src="images/logo.png" alt="Логотип Спартакиады" width="80" height="80">
+        </div>
+        <nav class="navigation">
+            <button class="nav-button" onclick="showRating()">
+                Рейтинг<br>Спартакиады
+            </button>
+            <button class="nav-button" onclick="showResults()">
+                Результаты<br>Соревнований
+            </button>
+            <button class="nav-button" onclick="showSchedule()">
+                Расписание<br>Соревнований
+            </button>
+        </nav>
+    </header>
+
+    <div class="grid-container">
+        <div class="page-title-grid">
+            <h1>Редактирование команд</h1>
+        </div>
+        <div class="sidebar-grid">
+            <div class="filter-group">
+                <label for="faculty-type">Факультет</label>
+                <select id="faculty-type" class="filter-select">
+                    <option value="">Факультеты</option>
+                </select>
+
+                <label for="sport-type">Вид соревнований (командный)</label>
+                <select id="sport-type" class="filter-select">
+                    <option value="">Все виды</option>
+                </select>
+
+                <label class="gender-filter-label">Пол участников</label>
+                    <div class="gender-filter">
+                        <label>
+                            <input type="radio" name="filter-gender" value="" checked> Все
+                        </label>
+                        <label>
+                            <input type="radio" name="filter-gender" value="М"> М
+                        </label>
+                        <label>
+                            <input type="radio" name="filter-gender" value="Ж"> Ж
+                        </label>
+                    </div>
+            </div>
+        </div>
+
+        <div class="main-content-grid">
+            <div class="teams-container">
+
+                <div class="students-list-table">
+                    <table class="table-header table-center">
+                        <caption>Команда</caption>
+                        <thead>
+                            <tr>
+                                <th>Имя</th>
+                                <th>Группа</th>
+                                <th>Пол</th>
+                                <th>Действие</th>
+                            </tr>
+                        </thead>
+                    </table>
+                    <div class="table-body-container" id="team-container">
+                        <table class="table-body">
+                            <tbody id="teams-table">
+                                <!-- Results will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="students-list-table">
+                    <table class="table-header table-center">
+                        <caption>Студенты</caption>
+                        <thead>
+                            <tr>
+                                <th>Имя</th>
+                                <th>Группа</th>
+                                <th>Пол</th>
+                                <th>Действие</th>
+                            </tr>
+                        </thead>
+                    </table>
+                    <div class="table-body-container">
+                        <table class="table-body">
+                            <tbody id="students-table">
+                                <!-- Results will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="team-button-container">
+                <button class="btn-add-team">
+                    Сохранить изменения
+                </button>
+
+                <button class="btn-delete-team" onclick="deleteChanges()">
+                    Отменить изменения
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/teams.js"></script>
+</body>
+</html>

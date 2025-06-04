@@ -121,7 +121,7 @@ body {
     padding: 15px;
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    flex: 0.6;
+    /* flex: 0.6; */
     display: flex;
     flex-direction: column;
     min-height: 180px;
@@ -355,6 +355,38 @@ body {
     cursor: pointer;
     transition: background-color 0.3s;
 }
+
+.btn-add-team {
+    background-color: #4caf50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 8px 15px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.btn-delete-team {
+    background-color: #f44336;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 8px 15px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+.btn-add-team:hover{
+    background-color: #45a049;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+.btn-delete-team:hover {
+    background-color: #d32f2f;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}  
 
 .btn-add-member:hover {
     background-color: #0056b3;
@@ -713,6 +745,45 @@ body {
     min-height: 0;
 }
 
+.team-button-container{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    border-radius: 10px;
+    background-color: rgba(255, 228, 179, 0.95);
+    flex-direction: row;
+    gap: 20px;
+}
+
+.team-button-container button{
+    font-size: 20px;
+}
+
+.teams-container {
+    background-color: rgba(255, 228, 179, 0.95);
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    flex: 1;
+    display: flex;
+    flex-direction: row;
+    gap: 20px;
+    overflow: hidden;
+    min-height: 0;
+}
+
+.students-list-table{
+    width: 100%;
+    border-collapse: collapse;
+    background-color: #fff;
+    border-radius: 8px;
+    overflow: hidden;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
 .results-table {
     width: 100%;
     border-collapse: collapse;
@@ -755,6 +826,20 @@ body {
     padding: 12px;
     text-align: left;
     border-bottom: 1px solid #ddd;
+}
+
+.table-header caption {
+    background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+    font-weight: bold;
+    padding: 12px;
+    text-align: center;
+    font-size: large;
+    color: white;
+    border-bottom: 1px solid #ddd;
+}
+
+.table-center th{
+    text-align: center;
 }
 
 .table-body td {

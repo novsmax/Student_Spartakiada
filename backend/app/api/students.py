@@ -1,10 +1,10 @@
 # backend/app/api/students.py - ИСПРАВЛЕННАЯ ВЕРСИЯ
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from ..database import get_db
-from ..models import Student, Faculty, Group, Competition, Judge, User
+from ..models import Student, Faculty, Group, Competition, Judge, User, Team, team_students
 from ..schemas.student import StudentCreate, StudentRead, StudentFindOrCreateRequest, StudentFindOrCreateResponse
 
 router = APIRouter()
@@ -36,6 +36,92 @@ def get_students(
     students = query.all()
     return students
 
+@router.get("/student_by_faculty", response_model=List[Dict])
+def get_students_by_faculty_id(
+        faculty_id: Optional[int] = Query(None),
+        gender: Optional[str] = Query(None),
+        db: Session = Depends(get_db)
+):
+    query = db.query(Student).join(Group).join(Faculty)
+
+    if faculty_id:
+        query = query.filter(Faculty.id == faculty_id)
+
+    if gender:
+        query = query.filter(Student.gender == gender)
+
+    students = query.all()
+
+    result = []
+    for student in students:
+        query = db.query(Group).filter(Group.id == student.group_id)
+        group = query.first()
+
+        query = db.query(Faculty).filter(Faculty.id == faculty_id)
+        faculty = query.first()
+
+        result.append({
+            'id': student.id,
+            'first_name': student.first_name,
+            'last_name': student.last_name,
+            'middle_name': student.middle_name,
+            'gender': student.gender,
+            'group_id': student.group_id,
+            'group_name': group.number,
+            'faculty_name': faculty.abbreviation,
+        })
+
+    return result
+
+@router.get("/team_by_sport_faculty", response_model=List[Dict])
+def get_team_by_sport_faculty(
+    db: Session = Depends(get_db), 
+    faculty_id: Optional[int] = Query(None), 
+    sport_type_id: Optional[int] = Query(None),
+    gender: Optional[str] = Query(None),
+):
+    
+    query = db.query(Student
+        ).join(team_students, Student.id == team_students.c.student_id
+        ).join(Team, team_students.c.team_id == Team.id
+        ).options(
+            joinedload(Student.group),
+            joinedload(Student.teams).joinedload(Team.sport_type),
+            joinedload(Student.teams).joinedload(Team.faculty)
+        )
+
+    if sport_type_id:
+        query = query.filter(Team.sport_type_id == sport_type_id)
+    
+    if faculty_id:
+        query = query.filter(Team.faculty_id == faculty_id)
+    
+    if gender:
+        query = query.filter(Student.gender == gender)
+    
+    students = query.all()
+    
+    result = []
+    for student in students:
+        team = None
+        for t in student.teams:
+            if t.faculty_id == faculty_id and t.sport_type_id == sport_type_id:
+                team = t
+                break
+        
+        if team:
+            result.append({
+                'id': student.id,
+                'first_name': student.first_name,
+                'last_name': student.last_name,
+                'middle_name': student.middle_name,
+                'gender': student.gender,
+                'group_number': student.group.number if student.group else None,
+                'sport_type_name': team.sport_type.name if team.sport_type else None,
+                'faculty_name': team.faculty.name if team.faculty else None
+            })
+    
+    return result
 
 @router.post("/find-or-create/", response_model=StudentFindOrCreateResponse)
 def find_or_create_student(
