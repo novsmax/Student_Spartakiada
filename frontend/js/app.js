@@ -1,4 +1,4 @@
-// frontend/js/app.js - ИСПРАВЛЕННАЯ ВЕРСИЯ с отладкой
+// frontend/js/app.js - ИСПРАВЛЕННАЯ ВЕРСИЯ с проверками DOM
 
 const API_URL = 'http://localhost:8000/api';
 let currentSportType = null;
@@ -14,8 +14,15 @@ let validationTimer = null;
 
 // Обработка кликов по кнопкам выбора пола
 function initGenderButtons() {
+    console.log('Инициализация кнопок выбора пола...');
+
     const genderLabels = document.querySelectorAll('.gender-filter label');
     const genderRadios = document.querySelectorAll('input[name="filter-gender"]');
+
+    if (genderLabels.length === 0 || genderRadios.length === 0) {
+        console.warn('Gender filter elements not found');
+        return;
+    }
 
     // Функция для обновления активных классов
     function updateActiveClasses() {
@@ -54,6 +61,17 @@ function initGenderButtons() {
 // Initialize the app
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('Инициализация приложения...');
+
+    // Проверяем наличие основных элементов
+    const requiredElements = ['institute-input', 'name-input', 'result-input', 'sport-type', 'results-tbody', 'rating-list'];
+    const missingElements = requiredElements.filter(id => !document.getElementById(id));
+
+    if (missingElements.length > 0) {
+        console.error('Отсутствуют элементы:', missingElements);
+        showInfoPanel('Ошибка: отсутствуют необходимые элементы интерфейса', 'error');
+        return;
+    }
+
     try {
         await loadSportTypes();
         await loadResults();
@@ -73,14 +91,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // Set up event listeners
-    document.getElementById('sport-type').addEventListener('change', async (e) => {
-        currentSportType = e.target.value ? parseInt(e.target.value) : null;
-        console.log('Выбран вид спорта:', currentSportType);
-        await loadResults();
-        await loadRating();
-        updatePlaceInput();
-        updateResultInputPlaceholder();
-    });
+    const sportTypeSelect = document.getElementById('sport-type');
+    if (sportTypeSelect) {
+        sportTypeSelect.addEventListener('change', async (e) => {
+            currentSportType = e.target.value ? parseInt(e.target.value) : null;
+            console.log('Выбран вид спорта:', currentSportType);
+            await loadResults();
+            await loadRating();
+            updatePlaceInput();
+            updateResultInputPlaceholder();
+        });
+    }
 
     // Gender filter event listeners
     document.querySelectorAll('input[name="filter-gender"]').forEach(radio => {
@@ -113,6 +134,10 @@ async function loadSportTypes() {
         console.log('Виды спорта загружены:', sportTypes);
 
         const select = document.getElementById('sport-type');
+        if (!select) {
+            throw new Error('Sport type select element not found');
+        }
+
         select.innerHTML = '<option value="">Вид соревнований</option>';
 
         if (Array.isArray(sportTypes)) {
@@ -128,13 +153,17 @@ async function loadSportTypes() {
     } catch (error) {
         console.error('Error loading sport types:', error);
         const select = document.getElementById('sport-type');
-        select.innerHTML = '<option value="">Ошибка загрузки</option>';
+        if (select) {
+            select.innerHTML = '<option value="">Ошибка загрузки</option>';
+        }
     }
 }
 
 // Update place input based on current results
 function updatePlaceInput() {
     const tbody = document.getElementById('results-tbody');
+    if (!tbody) return;
+
     const rows = tbody.getElementsByTagName('tr');
     const nextPlace = rows.length + 1;
 
@@ -148,6 +177,10 @@ function updatePlaceInput() {
 async function loadResults() {
     try {
         const tbody = document.getElementById('results-tbody');
+        if (!tbody) {
+            console.error('Results tbody not found');
+            return;
+        }
 
         // Если не выбран вид спорта, показываем сообщение
         if (!currentSportType) {
@@ -211,7 +244,9 @@ async function loadResults() {
     } catch (error) {
         console.error('Error loading results:', error);
         const tbody = document.getElementById('results-tbody');
-        tbody.innerHTML = '<tr><td colspan="6" class="error-message">Ошибка загрузки результатов</td></tr>';
+        if (tbody) {
+            tbody.innerHTML = '<tr><td colspan="6" class="error-message">Ошибка загрузки результатов</td></tr>';
+        }
         updatePlaceInput();
     }
 }
@@ -222,6 +257,15 @@ async function loadResults() {
 
 function displayTeamResultsWithPoints(results) {
     const tbody = document.getElementById('results-tbody');
+    if (!tbody) return;
+
+    console.log('Отображение командных результатов с фильтром по полу:', results);
+
+    // Если результатов нет, показываем сообщение
+    if (!results || results.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="no-results-message">Нет результатов для выбранного пола</td></tr>';
+        return;
+    }
 
     // Группируем по факультетам (в рамках одного пола)
     const facultyGroups = {};
@@ -230,32 +274,50 @@ function displayTeamResultsWithPoints(results) {
         if (!facultyGroups[facultyId]) {
             facultyGroups[facultyId] = {
                 faculty_abbreviation: performance.faculty_abbreviation,
+                faculty_name: performance.faculty_name,
                 place: performance.place,
                 points: performance.points,
-                members: []
+                members: [],
+                original_result: performance.original_result,
+                time_result: performance.time_result
             };
         }
         facultyGroups[facultyId].members.push(performance.student_name);
     });
 
+    // Проверяем есть ли команды после группировки
+    const teams = Object.values(facultyGroups);
+    if (teams.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="no-results-message">Команды не найдены для выбранного пола</td></tr>';
+        return;
+    }
+
     // Сортируем команды по баллам (больше баллов = лучше место)
-    const sortedGroups = Object.values(facultyGroups).sort((a, b) => b.points - a.points);
+    teams.sort((a, b) => b.points - a.points);
 
     // Пересчитываем места после сортировки
     let currentPlace = 1;
-    for (let i = 0; i < sortedGroups.length; i++) {
-        if (i > 0 && sortedGroups[i].points !== sortedGroups[i - 1].points) {
+    for (let i = 0; i < teams.length; i++) {
+        if (i > 0 && teams[i].points !== teams[i - 1].points) {
             currentPlace = i + 1;
         }
-        sortedGroups[i].place = currentPlace;
+        teams[i].place = currentPlace;
     }
 
     // Отображаем командные результаты с баллами в правильном порядке
-    sortedGroups.forEach(group => {
+    teams.forEach(group => {
         let placeClass = '';
         if (group.place === 1) placeClass = 'gold-place';
         else if (group.place === 2) placeClass = 'silver-place';
         else if (group.place === 3) placeClass = 'bronze-place';
+
+        // Определяем отображение результата
+        let resultDisplay = '-';
+        if (group.time_result) {
+            resultDisplay = group.time_result;
+        } else if (group.original_result) {
+            resultDisplay = `${group.original_result.toFixed(1)} очков`;
+        }
 
         // Заголовок команды
         const headerRow = document.createElement('tr');
@@ -263,7 +325,7 @@ function displayTeamResultsWithPoints(results) {
         headerRow.innerHTML = `
             <td class="${placeClass}">${group.place}</td>
             <td colspan="2">${group.faculty_abbreviation} - Команда</td>
-            <td>-</td>
+            <td>${resultDisplay}</td>
             <td>${group.points.toFixed(0)}</td>
             <td></td>
         `;
@@ -284,10 +346,13 @@ function displayTeamResultsWithPoints(results) {
             tbody.appendChild(memberRow);
         });
     });
+
+    console.log(`Отображено ${teams.length} команд(ы)`);
 }
 
 function displayIndividualResultsWithPoints(results) {
     const tbody = document.getElementById('results-tbody');
+    if (!tbody) return;
 
     // Отображаем индивидуальные результаты с баллами
     results.forEach(performance => {
@@ -323,6 +388,7 @@ function displayIndividualResultsWithPoints(results) {
 
 function displayMixedTeamResults(results) {
     const tbody = document.getElementById('results-tbody');
+    if (!tbody) return;
 
     // Данные уже приходят отсортированными с сервера,
     // просто группируем их сохраняя порядок
@@ -397,6 +463,7 @@ function displayMixedTeamResults(results) {
 
 function displayMixedIndividualResults(results) {
     const tbody = document.getElementById('results-tbody');
+    if (!tbody) return;
 
     // Отображаем общий протокол всех участников с баллами
     results.forEach(performance => {
@@ -480,13 +547,20 @@ async function loadRating() {
     } catch (error) {
         console.error('Error loading rating:', error);
         const ratingList = document.getElementById('rating-list');
-        ratingList.innerHTML = '<div style="text-align: center;">Ошибка загрузки рейтинга</div>';
+        if (ratingList) {
+            ratingList.innerHTML = '<div style="text-align: center;">Ошибка загрузки рейтинга</div>';
+        }
     }
 }
 
 // Display rating
 function displayRating(ratings) {
     const ratingList = document.getElementById('rating-list');
+    if (!ratingList) {
+        console.error('Rating list element not found');
+        return;
+    }
+
     ratingList.innerHTML = '';
 
     if (Array.isArray(ratings)) {
@@ -624,7 +698,10 @@ function showInfoPanel(message, type = 'info', duration = 5000) {
     const text = document.getElementById('info-text');
     const icon = document.querySelector('.info-icon');
 
-    if (!panel || !text || !icon) return;
+    if (!panel || !text || !icon) {
+        console.warn('Info panel elements not found');
+        return;
+    }
 
     // Очищаем предыдущие классы
     panel.className = 'info-panel';
@@ -654,9 +731,17 @@ function showInfoPanel(message, type = 'info', duration = 5000) {
 // Функция для установки состояния поля ввода
 function setFieldState(fieldId, state, message = '') {
     const input = document.getElementById(fieldId);
-    if (!input) return;
+    if (!input) {
+        console.warn(`Element ${fieldId} not found`);
+        return;
+    }
 
     const field = input.closest('.input-field');
+    if (!field) {
+        console.warn(`Parent .input-field not found for ${fieldId}`);
+        return;
+    }
+
     const hint = field.querySelector('.input-hint');
 
     // Очищаем предыдущие состояния
@@ -687,7 +772,10 @@ function updateFieldHint(fieldId) {
     const input = document.getElementById(fieldId);
     if (!input) return;
 
-    const hint = input.closest('.input-field').querySelector('.input-hint');
+    const field = input.closest('.input-field');
+    if (!field) return;
+
+    const hint = field.querySelector('.input-hint');
     if (!hint) return;
 
     switch (fieldId) {
@@ -710,7 +798,10 @@ function updateResultInputHint() {
     const input = document.getElementById('result-input');
     if (!input) return;
 
-    const hint = input.closest('.input-field').querySelector('.input-hint');
+    const field = input.closest('.input-field');
+    if (!field) return;
+
+    const hint = field.querySelector('.input-hint');
     if (!hint) return;
 
     if (!currentSportType) {
@@ -720,6 +811,8 @@ function updateResultInputHint() {
     }
 
     const sportTypeSelect = document.getElementById('sport-type');
+    if (!sportTypeSelect) return;
+
     const sportName = sportTypeSelect.options[sportTypeSelect.selectedIndex].text;
     const resultType = getResultType(sportName);
 
@@ -773,6 +866,11 @@ function validateField(fieldId, value) {
 
             try {
                 const sportTypeSelect = document.getElementById('sport-type');
+                if (!sportTypeSelect) {
+                    setFieldState(fieldId, 'error', 'Ошибка при определении вида спорта');
+                    return false;
+                }
+
                 const sportName = sportTypeSelect.options[sportTypeSelect.selectedIndex].text;
                 const resultType = getResultType(sportName);
                 validateResult(value, resultType);
@@ -795,7 +893,10 @@ function validateField(fieldId, value) {
 // Функция для управления состоянием кнопки добавления
 function setAddButtonState(loading = false) {
     const button = document.getElementById('add-result-btn');
-    if (!button) return;
+    if (!button) {
+        console.warn('Add result button not found');
+        return;
+    }
 
     const textSpan = button.querySelector('.btn-text');
     const spinner = button.querySelector('.btn-spinner');
@@ -815,6 +916,8 @@ function setAddButtonState(loading = false) {
 
 // Инициализация обработчиков событий для валидации в реальном времени
 function initializeFormValidation() {
+    console.log('Инициализация валидации формы...');
+
     // Валидация института
     const instituteInput = document.getElementById('institute-input');
     if (instituteInput) {
@@ -828,6 +931,8 @@ function initializeFormValidation() {
         instituteInput.addEventListener('blur', (e) => {
             validateField('institute-input', e.target.value);
         });
+    } else {
+        console.warn('Element institute-input not found');
     }
 
     // Валидация имени
@@ -843,6 +948,8 @@ function initializeFormValidation() {
         nameInput.addEventListener('blur', (e) => {
             validateField('name-input', e.target.value);
         });
+    } else {
+        console.warn('Element name-input not found');
     }
 
     // Валидация результата
@@ -858,6 +965,8 @@ function initializeFormValidation() {
         resultInput.addEventListener('blur', (e) => {
             validateField('result-input', e.target.value);
         });
+    } else {
+        console.warn('Element result-input not found');
     }
 }
 
@@ -873,6 +982,8 @@ function updateResultInputPlaceholder() {
     }
 
     const sportTypeSelect = document.getElementById('sport-type');
+    if (!sportTypeSelect) return;
+
     const sportName = sportTypeSelect.options[sportTypeSelect.selectedIndex].text;
     const resultType = getResultType(sportName);
 
@@ -898,10 +1009,20 @@ function updateResultInputPlaceholder() {
 async function addResult() {
     if (isAddingResult) return;
 
-    const institute = document.getElementById('institute-input').value.trim().toUpperCase();
-    const name = document.getElementById('name-input').value.trim();
-    const result = document.getElementById('result-input').value.trim();
-    const gender = document.querySelector('input[name="gender"]:checked').value;
+    const instituteInput = document.getElementById('institute-input');
+    const nameInput = document.getElementById('name-input');
+    const resultInput = document.getElementById('result-input');
+    const genderRadio = document.querySelector('input[name="gender"]:checked');
+
+    if (!instituteInput || !nameInput || !resultInput || !genderRadio) {
+        showInfoPanel('Ошибка: не найдены элементы формы', 'error');
+        return;
+    }
+
+    const institute = instituteInput.value.trim().toUpperCase();
+    const name = nameInput.value.trim();
+    const result = resultInput.value.trim();
+    const gender = genderRadio.value;
 
     console.log('=== НАЧАЛО ДОБАВЛЕНИЯ РЕЗУЛЬТАТА ===');
     console.log('Данные формы:', { institute, name, result, gender, currentSportType });
@@ -928,6 +1049,10 @@ async function addResult() {
 
         // Получаем информацию о виде спорта
         const sportTypeSelect = document.getElementById('sport-type');
+        if (!sportTypeSelect) {
+            throw new Error('Элемент выбора вида спорта не найден');
+        }
+
         const sportName = sportTypeSelect.options[sportTypeSelect.selectedIndex].text;
         const resultType = getResultType(sportName);
 
@@ -1090,6 +1215,7 @@ async function deleteResult(performanceId) {
 }
 
 // Clear input fields
+// Обновить функцию clearInputs (заменить существующую)
 function clearInputs() {
     const instituteInput = document.getElementById('institute-input');
     const nameInput = document.getElementById('name-input');
@@ -1130,4 +1256,255 @@ function showResults() {
 
 function showSchedule() {
     window.location.href = 'schedule.html';
+}
+
+
+// ===========================================
+// УПРАВЛЕНИЕ ФОРМОЙ ДОБАВЛЕНИЯ
+// ===========================================
+
+// Переключение видимости формы добавления
+function toggleAddForm() {
+    const formContainer = document.getElementById('add-form-container');
+    const toggleBtn = document.getElementById('toggle-form-btn');
+    const toggleIcon = toggleBtn.querySelector('.toggle-icon');
+    const toggleText = toggleBtn.querySelector('.toggle-text');
+
+    if (!formContainer || !toggleBtn) {
+        console.warn('Form toggle elements not found');
+        return;
+    }
+
+    const isVisible = formContainer.style.display !== 'none';
+
+    if (isVisible) {
+        // Скрываем форму
+        formContainer.style.display = 'none';
+        toggleBtn.classList.remove('active');
+        toggleText.textContent = 'Добавить результат';
+
+        // Очищаем форму при закрытии
+        clearInputs();
+    } else {
+        // Показываем форму
+        formContainer.style.display = 'flex';
+        toggleBtn.classList.add('active');
+        toggleText.textContent = 'Свернуть форму';
+
+        // Фокусируемся на первом поле
+        const firstInput = document.getElementById('institute-input');
+        if (firstInput) {
+            setTimeout(() => firstInput.focus(), 100);
+        }
+    }
+}
+
+// ===========================================
+// УПРАВЛЕНИЕ КОМАНДНЫМИ ФОРМАМИ
+// ===========================================
+
+let teamMemberCount = 0;
+
+// Функция для определения типа спорта
+function isTeamSport(sportName) {
+    const teamSports = ['Баскетбол', 'Волейбол', 'Футбол'];
+    return teamSports.some(sport => sportName.includes(sport));
+}
+
+// Переключение между формами в зависимости от вида спорта
+function switchSportForm() {
+    const sportTypeSelect = document.getElementById('sport-type');
+    const individualForm = document.getElementById('individual-form');
+    const teamForm = document.getElementById('team-form');
+
+    if (!sportTypeSelect || !individualForm || !teamForm) return;
+
+    const selectedSport = sportTypeSelect.options[sportTypeSelect.selectedIndex]?.text || '';
+
+    if (isTeamSport(selectedSport)) {
+        // Показываем командную форму
+        individualForm.style.display = 'none';
+        teamForm.style.display = 'block';
+        console.log('Переключение на командную форму для:', selectedSport);
+    } else {
+        // Показываем индивидуальную форму
+        individualForm.style.display = 'block';
+        teamForm.style.display = 'none';
+        console.log('Переключение на индивидуальную форму для:', selectedSport);
+    }
+}
+
+// Добавление члена команды
+function addTeamMember() {
+    const membersList = document.getElementById('team-members-list');
+    if (!membersList) return;
+
+    // Удаляем placeholder если он есть
+    const placeholder = membersList.querySelector('.team-members-placeholder');
+    if (placeholder) {
+        placeholder.remove();
+    }
+
+    teamMemberCount++;
+
+    const memberItem = document.createElement('div');
+    memberItem.className = 'team-member-item';
+    memberItem.innerHTML = `
+        <input type="text" placeholder="Фамилия Имя Отчество" data-member-id="${teamMemberCount}">
+        <button type="button" class="btn-remove-member" onclick="removeTeamMember(this)">Удалить</button>
+    `;
+
+    membersList.appendChild(memberItem);
+
+    // Фокусируемся на новом поле
+    const newInput = memberItem.querySelector('input');
+    if (newInput) {
+        newInput.focus();
+    }
+}
+
+// Удаление члена команды
+function removeTeamMember(button) {
+    const memberItem = button.closest('.team-member-item');
+    if (memberItem) {
+        memberItem.remove();
+    }
+
+    // Показываем placeholder если список пуст
+    const membersList = document.getElementById('team-members-list');
+    if (membersList && membersList.children.length === 0) {
+        showTeamMembersPlaceholder();
+    }
+}
+
+// Показать placeholder для членов команды
+function showTeamMembersPlaceholder() {
+    const membersList = document.getElementById('team-members-list');
+    if (!membersList) return;
+
+    membersList.innerHTML = `
+        <div class="team-members-placeholder">
+            Нажмите "Добавить игрока" чтобы добавить членов команды
+        </div>
+    `;
+}
+
+// Очистка командной формы
+function clearTeamForm() {
+    const facultySelect = document.getElementById('team-faculty-select');
+    const resultInput = document.getElementById('team-result-input');
+    const maleRadio = document.querySelector('input[name="team-gender"][value="М"]');
+
+    if (facultySelect) facultySelect.value = '';
+    if (resultInput) resultInput.value = '';
+    if (maleRadio) maleRadio.checked = true;
+
+    // Очищаем список членов команды
+    const membersList = document.getElementById('team-members-list');
+    if (membersList) {
+        showTeamMembersPlaceholder();
+    }
+
+    teamMemberCount = 0;
+
+    // Скрываем информационную панель
+    const infoPanel = document.getElementById('info-panel');
+    if (infoPanel) {
+        infoPanel.style.display = 'none';
+    }
+}
+
+// Добавление результата команды
+async function addTeamResult() {
+    console.log('=== ДОБАВЛЕНИЕ КОМАНДНОГО РЕЗУЛЬТАТА ===');
+
+    const facultySelect = document.getElementById('team-faculty-select');
+    const resultInput = document.getElementById('team-result-input');
+    const genderRadio = document.querySelector('input[name="team-gender"]:checked');
+    const memberInputs = document.querySelectorAll('#team-members-list input[type="text"]');
+
+    if (!facultySelect || !resultInput || !genderRadio) {
+        showInfoPanel('Ошибка: не найдены элементы командной формы', 'error');
+        return;
+    }
+
+    const faculty = facultySelect.value.trim();
+    const result = resultInput.value.trim();
+    const gender = genderRadio.value;
+
+    // Собираем имена членов команды
+    const teamMembers = [];
+    memberInputs.forEach(input => {
+        const name = input.value.trim();
+        if (name) {
+            teamMembers.push(name);
+        }
+    });
+
+    console.log('Данные команды:', { faculty, result, gender, teamMembers, currentSportType });
+
+    // Валидация
+    if (!faculty) {
+        showInfoPanel('Выберите институт команды', 'error');
+        return;
+    }
+
+    if (!result) {
+        showInfoPanel('Введите результат команды', 'error');
+        return;
+    }
+
+    if (teamMembers.length === 0) {
+        showInfoPanel('Добавьте хотя бы одного члена команды', 'error');
+        return;
+    }
+
+    if (!currentSportType) {
+        showInfoPanel('Сначала выберите вид спорта', 'error');
+        return;
+    }
+
+    try {
+        setAddButtonState(true, 'add-team-btn');
+        showInfoPanel('Добавление команды...', 'info', 0);
+
+        // Здесь будет логика добавления команды через API
+        // Пока что показываем успешное сообщение
+        showInfoPanel(`Команда ${faculty} (${gender === 'М' ? 'мужская' : 'женская'}) с ${teamMembers.length} игроками успешно добавлена!`, 'success');
+
+        // Очищаем форму
+        clearTeamForm();
+
+        // Обновляем результаты
+        await loadResults();
+        await loadRating();
+
+    } catch (error) {
+        console.error('Ошибка при добавлении команды:', error);
+        showInfoPanel(`Ошибка: ${error.message}`, 'error');
+    } finally {
+        setAddButtonState(false, 'add-team-btn');
+    }
+}
+
+// Обновленная функция управления состоянием кнопки
+function setAddButtonState(loading = false, buttonId = 'add-result-btn') {
+    const button = document.getElementById(buttonId);
+    if (!button) {
+        console.warn(`Button ${buttonId} not found`);
+        return;
+    }
+
+    const textSpan = button.querySelector('.btn-text');
+    const spinner = button.querySelector('.btn-spinner');
+
+    if (loading) {
+        button.disabled = true;
+        if (textSpan) textSpan.style.display = 'none';
+        if (spinner) spinner.style.display = 'inline-flex';
+    } else {
+        button.disabled = false;
+        if (textSpan) textSpan.style.display = 'inline';
+        if (spinner) spinner.style.display = 'none';
+    }
 }

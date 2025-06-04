@@ -5,115 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Студенческая спартакиада</title>
     <link rel="stylesheet" href="css/styles.css">
-    <style>
-        /* Дополнительные стили для мест */
-        .gold-place {
-            color: #FFD700;
-            font-weight: bold;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
-        }
-
-        .silver-place {
-            color: #C0C0C0;
-            font-weight: bold;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
-        }
-
-        .bronze-place {
-            color: #CD7F32;
-            font-weight: bold;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
-        }
-
-        .gold-text {
-            color: #FFD700;
-            font-weight: bold;
-        }
-
-        .silver-text {
-            color: #808080;
-            font-weight: bold;
-        }
-
-        .bronze-text {
-            color: #CD7F32;
-            font-weight: bold;
-        }
-
-        .results-table tbody tr:nth-child(1) {
-            background-color: #fff8dc;
-        }
-
-        .results-table tbody tr:nth-child(2) {
-            background-color: #f5f5f5;
-        }
-
-        .results-table tbody tr:nth-child(3) {
-            background-color: #faebd7;
-        }
-
-        .rating-panel h3 {
-            font-size: 16px;
-            margin-bottom: 15px;
-            text-align: center;
-            color: #666;
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 10px;
-        }
-
-        /* Стили для командных видов спорта */
-        .team-header {
-            background-color: #f0f0f0;
-            font-weight: bold;
-        }
-
-        .team-member {
-            font-style: italic;
-        }
-
-        /* Все кнопки видны всегда */
-        .btn-delete, .btn-add {
-            display: inline-block !important;
-        }
-
-        /* Стили для центрированных сообщений в таблице */
-        .no-sport-message,
-        .no-results-message,
-        .error-message {
-            text-align: center !important;
-            vertical-align: middle !important;
-            padding: 50px 20px !important;
-            font-size: 20px !important;
-            font-weight: bold !important;
-            color: #666 !important;
-            background-color: #f8f9fa !important;
-            border: none !important;
-            position: relative;
-        }
-
-        .no-sport-message {
-            color: #007bff !important;
-            background-color: #e7f3ff !important;
-        }
-
-        .no-results-message {
-            color: #28a745 !important;
-            background-color: #e8f5e9 !important;
-        }
-
-        .error-message {
-            color: #dc3545 !important;
-            background-color: #f8d7da !important;
-        }
-
-        /* Дополнительные стили для центрирования */
-        .table-body tr td.no-sport-message,
-        .table-body tr td.no-results-message,
-        .table-body tr td.error-message {
-            height: 200px;
-            vertical-align: middle;
-        }
-    </style>
 </head>
 <body>
     <!-- Header with logo and navigation -->
@@ -176,37 +67,69 @@
 
         <!-- Main content area -->
         <div class="main-content-grid">
-            <!-- Input controls -->
-            <div class="controls">
-                <div class="input-grid">
-                    <div class="input-field">
-                        <label>Институт</label>
-                        <input type="text" id="institute-input" placeholder="Введите Институт">
-                    </div>
-                    <div class="input-field">
-                        <label>Имя</label>
-                        <input type="text" id="name-input" placeholder="Введите Имя">
-                    </div>
-                    <div class="input-field">
-                        <label>Результат</label>
-                        <input type="text" id="result-input" placeholder="Введите Результат">
-                    </div>
-                    <div class="input-field">
-                        <label>Пол</label>
-                        <div class="gender-select">
-                            <label>
-                                <input type="radio" name="gender" value="М" checked> М
-                            </label>
-                            <label>
-                                <input type="radio" name="gender" value="Ж"> Ж
-                            </label>
-                        </div>
-                    </div>
+
+            <div class="controls-container">
+                <!-- Кнопка для раскрытия формы -->
+                <div class="form-toggle-container">
+                    <button id="toggle-form-btn" class="btn-toggle-form" onclick="toggleAddForm()">
+                        <span class="toggle-icon">+</span>
+                        <span class="toggle-text">Добавить результат</span>
+                    </button>
                 </div>
 
-                <div class="action-buttons">
-                    <button class="btn btn-add" onclick="addResult()">Добавить результат</button>
-                    <button class="btn btn-clear" onclick="clearInputs()">Очистить</button>
+                <!-- Скрытая форма добавления -->
+                <div id="add-form-container" class="add-form-container" style="display: none;">
+                    <div class="input-fields">
+                        <div class="input-grid">
+                            <div class="input-field">
+                                <label>Институт</label>
+                                <input type="text" id="institute-input" placeholder="Введите Институт">
+                                <span class="input-hint">Введите сокращение института</span>
+                            </div>
+                            <div class="input-field">
+                                <label>Имя</label>
+                                <input type="text" id="name-input" placeholder="Введите Имя">
+                                <span class="input-hint">Формат: Фамилия Имя Отчество</span>
+                            </div>
+                            <div class="input-field">
+                                <label>Результат</label>
+                                <input type="text" id="result-input" placeholder="Введите Результат">
+                                <span class="input-hint">Выберите вид спорта для формата</span>
+                            </div>
+                            <div class="input-field">
+                                <label>Пол</label>
+                                <div class="gender-select">
+                                    <label>
+                                        <input type="radio" name="gender" value="М" checked> М
+                                    </label>
+                                    <label>
+                                        <input type="radio" name="gender" value="Ж"> Ж
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="action-buttons">
+                        <button id="add-result-btn" class="btn btn-add" onclick="addResult()">
+                            <span class="btn-text">Добавить результат</span>
+                            <span class="btn-spinner" style="display: none;">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                                </svg>
+                            </span>
+                        </button>
+                        <button class="btn btn-clear" onclick="clearInputs()">Очистить</button>
+                        <button class="btn btn-cancel" onclick="toggleAddForm()">Отмена</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Информационная панель -->
+            <div id="info-panel" class="info-panel">
+                <div class="info-content">
+                    <span class="info-icon">ℹ️</span>
+                    <span id="info-text" class="info-text"></span>
                 </div>
             </div>
 

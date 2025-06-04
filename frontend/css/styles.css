@@ -1,4 +1,4 @@
-/* frontend/css/styles.css - ПОЛНАЯ ВЕРСИЯ */
+/* frontend/css/styles.css - ПОЛНАЯ ОБНОВЛЕННАЯ ВЕРСИЯ */
 
 /* Сброс стилей */
 * {
@@ -11,7 +11,7 @@ body {
     font-family: Arial, sans-serif;
     color: #333;
     min-height: 88vh;
-    background: linear-gradient(135deg, #40e0d0 0%, #20b2aa 30%, #ff9800 100%);
+    background: linear-gradient(to bottom, #40e0d0 0%, #20b2aa 50%, #ff9800 100%);
 }
 
 /* Header styles */
@@ -281,20 +281,210 @@ body {
     border-bottom: none;
 }
 
-/* Controls */
-.controls {
-    background-color: rgba(255, 255, 255, 0.95);
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+.form-toggle-container {
     flex-shrink: 0;
+    width: 100%;
+}
+
+.btn-toggle-form {
+    background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 16px 24px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 0 2px 8px rgba(108, 117, 125, 0.3);
+    width: 100%;
+    min-height: 36px;
+}
+
+
+/* Стили для форм разных типов спорта */
+.sport-form {
+    width: 100%;
+}
+
+/* Стили для командной формы */
+.team-form-content {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.team-info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 20px;
+}
+
+.team-members-section {
+    background-color: rgba(248, 249, 250, 0.8);
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+}
+
+.team-members-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.team-members-header label {
+    font-weight: bold;
+    color: #555;
+    font-size: 16px;
+    margin: 0;
+}
+
+.btn-add-member {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 8px 15px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.btn-add-member:hover {
+    background-color: #0056b3;
+}
+
+.team-members-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 60px;
+}
+
+.team-member-item {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    background-color: white;
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid #e9ecef;
+}
+
+.team-member-item input {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.btn-remove-member {
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    padding: 5px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.btn-remove-member:hover {
+    background-color: #c82333;
+}
+
+.team-members-placeholder {
+    text-align: center;
+    color: #6c757d;
+    font-style: italic;
+    padding: 20px;
+    border: 2px dashed #dee2e6;
+    border-radius: 5px;
+}
+
+
+.btn-toggle-form:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(108, 117, 125, 0.4);
+    background: linear-gradient(135deg, #5a6268 0%, #495057 100%);
+}
+
+.toggle-icon {
+    font-size: 20px;
+    font-weight: bold;
+    transition: transform 0.3s ease;
+}
+
+.btn-toggle-form.active {
+    border-radius: 8px 8px 0 0; /* Только верхние углы скруглены */
+    box-shadow: 0 2px 8px rgba(108, 117, 125, 0.3);
+}
+
+.btn-toggle-form.active:hover {
+    transform: none;
+}
+
+/* Контейнер формы - на всю ширину */
+/* Контейнер формы - убираем верхние углы и отступ */
+.add-form-container {
+    width: 100%;
+    margin-top: 0; /* Убираем отступ сверху */
+    padding: 20px;
+    background-color: rgba(255, 255, 255, 0.95);
+    border-radius: 0 0 10px 10px; /* Только нижние углы скруглены */
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    animation: slideDown 0.3s ease-out;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    border-top: 1px solid rgba(108, 117, 125, 0.2); /* Тонкая линия для разделения */
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        max-height: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+    }
+    to {
+        opacity: 1;
+        max-height: 300px;
+        padding-top: 20px;
+        padding-bottom: 20px;
+    }
+}
+
+/* Обновленные стили для controls-container */
+.controls-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    flex-shrink: 0;
+    width: 100%;
+}
+
+/* Поля ввода на всю ширину */
+.input-fields {
+    background-color: transparent;
+    padding: 0;
+    border-radius: 0;
+    box-shadow: none;
+    flex: 1;
 }
 
 .input-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr 120px;
-    gap: 15px;
-    margin-bottom: 20px;
+    grid-template-columns: 1fr 2fr 1fr 120px;
+    gap: 20px;
+    width: 100%;
 }
 
 .input-field {
@@ -349,9 +539,23 @@ body {
     margin: 0;
 }
 
+/* Кнопки действий */
 .action-buttons {
     display: flex;
-    gap: 10px;
+    flex-direction: row;
+    gap: 15px;
+    align-self: stretch;
+    background-color: transparent;
+    padding: 0;
+    border-radius: 0;
+    box-shadow: none;
+    min-width: auto;
+    justify-content: flex-end;
+}
+
+.action-buttons .btn {
+    flex: 0 0 auto;
+    min-width: 140px;
 }
 
 .btn {
@@ -372,6 +576,7 @@ body {
     justify-content: center;
     gap: 8px;
     min-width: 180px;
+    white-space: nowrap;
 }
 
 .btn-add:hover {
@@ -387,10 +592,22 @@ body {
 .btn-clear {
     background-color: #f0f0f0;
     color: #333;
+    white-space: nowrap;
 }
 
 .btn-clear:hover {
     background-color: #e0e0e0;
+}
+
+/* Кнопка отмены */
+.btn-cancel {
+    background-color: #6c757d;
+    color: white;
+    white-space: nowrap;
+}
+
+.btn-cancel:hover {
+    background-color: #5a6268;
 }
 
 /* Стили для состояний кнопки добавления */
@@ -551,33 +768,39 @@ body {
     background-color: #f9f9f9;
 }
 
-/* Стили для сообщений в таблице */
+/* Стили для центрированных сообщений в таблице */
 .no-sport-message,
 .no-results-message,
 .error-message {
     text-align: center !important;
     vertical-align: middle !important;
-    padding: 40px 20px !important;
-    font-size: 18px !important;
+    padding: 60px 20px !important;
+    font-size: 24px !important;
     font-weight: bold !important;
-    color: #666 !important;
     background-color: #f8f9fa !important;
     border: none !important;
 }
 
 .no-sport-message {
     color: #007bff !important;
-    background-color: #e3f2fd !important;
+    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%) !important;
+    border: 2px solid #2196f3 !important;
+    border-radius: 12px !important;
+    box-shadow: 0 4px 15px rgba(33, 150, 243, 0.2) !important;
 }
 
 .no-results-message {
     color: #28a745 !important;
-    background-color: #e8f5e9 !important;
+    background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c8 100%) !important;
+    border: 2px solid #4caf50 !important;
+    border-radius: 12px !important;
 }
 
 .error-message {
     color: #dc3545 !important;
-    background-color: #f8d7da !important;
+    background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%) !important;
+    border: 2px solid #f44336 !important;
+    border-radius: 12px !important;
 }
 
 /* Стили для заголовков по полу */
@@ -700,120 +923,3 @@ body {
     background-color: #f8f9fa !important;
 }
 
-/* Responsive design */
-@media (max-width: 1200px) {
-    .grid-container {
-        grid-template-columns: 1fr;
-        grid-template-rows: auto auto 1fr;
-    }
-
-    .page-title-grid {
-        grid-column: 1;
-        grid-row: 1;
-    }
-
-    .sidebar-grid {
-        grid-column: 1;
-        grid-row: 2;
-        flex-direction: row;
-        gap: 20px;
-    }
-
-    .main-content-grid {
-        grid-column: 1;
-        grid-row: 3;
-    }
-}
-
-@media (max-width: 768px) {
-    .header {
-        flex-direction: column;
-        height: auto;
-        padding: 15px;
-    }
-
-    .logo img {
-        margin-right: 0;
-        margin-bottom: 15px;
-    }
-
-    .navigation {
-        flex-wrap: wrap;
-        justify-content: center;
-    }
-
-    .nav-button {
-        font-size: 14px;
-        padding: 10px 20px;
-        margin: 5px;
-    }
-
-    .grid-container {
-        margin-top: 160px;
-        padding: 15px;
-    }
-
-    .page-title-grid h1 {
-        font-size: 24px;
-        padding: 15px;
-    }
-
-    .sidebar-grid {
-        flex-direction: column;
-    }
-
-    .input-grid {
-        grid-template-columns: 1fr;
-        gap: 15px;
-    }
-
-    .input-field .gender-select {
-        justify-content: center;
-    }
-
-    .table-header th,
-    .table-body td {
-        font-size: 14px;
-        padding: 8px 4px;
-    }
-
-    /* Мобильные стили для сообщений */
-    .no-sport-message,
-    .no-results-message,
-    .error-message {
-        font-size: 16px !important;
-        padding: 30px 15px !important;
-    }
-
-    .gender-title {
-        font-size: 16px !important;
-        padding: 10px !important;
-    }
-
-    /* Адаптивные стили для кнопок выбора пола */
-    .gender-filter {
-        flex-direction: column;
-        gap: 8px;
-        padding: 12px;
-    }
-
-    .gender-filter label {
-        min-width: auto;
-        padding: 12px 16px;
-        font-size: 16px;
-    }
-
-    /* Адаптивные стили для формы */
-    .btn-add {
-        min-width: auto;
-        width: 100%;
-    }
-
-    .info-panel {
-        margin-top: 10px;
-    }
-
-    .input-hint {
-        font-size: 11px;
-    }
-}
