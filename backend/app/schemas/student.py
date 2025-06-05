@@ -36,3 +36,7 @@ class StudentFindOrCreateResponse(BaseModel):
     faculty_id: int
     faculty_name: str
     created: bool
+
+class StudentTeamCreate(BaseModel):
+    student_id: int
+    team_id: int

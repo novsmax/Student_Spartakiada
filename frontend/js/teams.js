@@ -1,9 +1,14 @@
-const API_URL = 'http://127.1.0.0:8000/api';
+const API_URL = 'http://127.0.0.1:8000/api';
 let currentSportType = null;
 let currentFaculty = null;
 let currentGenderFilter = '';
 
+let teamsID = [];
 let changes = [];
+
+function showResults() {
+    window.location.href = 'index.html';
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('Инициализация приложения...');
@@ -121,6 +126,9 @@ async function loadFaculties() {
 
 async function loadTeam() {
     try {
+
+        teamsID = [];
+
         const tbody = document.getElementById('teams-table');
         if (!currentFaculty) {
                 tbody.innerHTML = '<tr><td colspan="6" class="no-sport-message">Выберите факультет</td></tr>';
@@ -141,6 +149,10 @@ async function loadTeam() {
 
         const results = await response.json();
         console.log('Результаты загружены:', results);
+
+        results.forEach(team => {
+            teamsID.push([team.id, team.team_id, team.gender]);
+        });
 
         tbody.innerHTML = '';
         results.forEach(team => {
@@ -225,7 +237,7 @@ async function correctingStudents(deletedMember){
                 return;
         }
 
-        if(deletedMember.length > 1){
+        if(deletedMember.length >= 1){
             deletedIds = deletedMember.map(member => member.id);
         }else{
             deletedIds = deletedMember; 
@@ -360,6 +372,7 @@ function toTeam(event){
 
         const teamRow = document.createElement('tr');
         teamRow.setAttribute('id', `team-${studentId}`);
+        teamRow.setAttribute('class', `new-tr`);
         teamRow.innerHTML = `
             <td>${studentRow.cells[0].textContent}</td>
             <td style="text-align: center;">${studentRow.cells[1].textContent}</td>
@@ -409,6 +422,7 @@ function outTeam(event){
 
         const teamRow = document.createElement('tr');
         teamRow.setAttribute('id', `student-${studentId}`);
+        teamRow.setAttribute('class', `new-tr`);
         teamRow.innerHTML = `
             <td>${studentRow.cells[0].textContent}</td>
             <td style="text-align: center;">${studentRow.cells[1].textContent}</td>
@@ -438,45 +452,6 @@ async function deleteChanges(){
             return;
         }
 
-        console.log(changes)
-
-        // const reversedChanges = [...changes].reverse();
-
-        // reversedChanges.forEach(change => {
-        //     if (change.action === 'add') {
-        //         const teamRow = document.getElementById(`team-${change.studentId}`);
-        //         const tbody = document.getElementById('students-table');
-        //         if (teamRow) {
-        //             teamRow.remove();
-        //         }
-        //         const teamRowNew = document.createElement('tr');
-        //         teamRowNew.setAttribute('id', `student-${change.studentId}`);
-        //         teamRowNew.innerHTML = `
-        //             <td>${change.studentData.name}</td>
-        //             <td style="text-align: center;">${change.studentData.group}</td>
-        //             <td style="text-align: center;">${change.studentData.gender}</td>
-        //             <td style="text-align: center;"><button class="btn-add-team" onclick="toTeam(event)" id="add-${change.studentId}">Добавить</button></td>
-        //         `;
-        //         tbody.appendChild(teamRowNew);
-        //     }
-        //     if (change.action === 'remove') {
-        //         const studentRow = document.getElementById(`student-${change.studentId}`);
-        //         const tbody = document.getElementById('teams-table');
-        //         if (studentRow) {
-        //             studentRow.remove();
-        //         }
-        //         const studentRowNew = document.createElement('tr');
-        //         studentRowNew.setAttribute('id', `team-${change.studentId}`);
-        //         studentRowNew.innerHTML = `
-        //             <td>${change.studentData.name}</td>
-        //             <td style="text-align: center;">${change.studentData.group}</td>
-        //             <td style="text-align: center;">${change.studentData.gender}</td>
-        //             <td style="text-align: center;"><button class="btn-delete-team" onclick="outTeam(event)" id="del-${change.studentId}">Удалить</button></td>
-        //         `;
-        //         tbody.appendChild(studentRowNew);
-        //     }
-        // });
-
         changes = [];
         currentGenderFilter = '';
 
@@ -488,4 +463,117 @@ async function deleteChanges(){
         alert('Ошибка при удалении изменений');
         return;
     }
+}
+
+async function saveCnages(){
+    if (changes.length === 0) {
+        alert('Нет изменений для сохранения');
+        return;
+    };
+
+    for (const change of changes) {
+        let flag = true;
+        for (const row of teamsID) {
+            studentId = row[0];
+
+            if(change){
+                if(change.action === 'add' && change.studentId == studentId){
+                    console.log(`уже в команде ${studentId}`);
+                    flag = false;
+                    return;
+                }
+            }
+        };
+        let teamId = teamsID.find(row => row[2] == change.studentData.gender) || false;
+        if(flag){
+            if(change.action === 'add' && teamId){
+                let url = `${API_URL}/students/new_student_team`;
+
+                const response =  await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        student_id: parseInt(change.studentId),
+                        team_id: parseInt(teamId[1])
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const results = await response.json();
+
+                console.log(`${results.message} ${results.team_id} (${results.student_id})`);
+            }else if(change.action === 'add' && !teamId){
+                let urlTeam = `${API_URL}/students/create_new_team`;
+
+                const responseTeam =  await fetch(urlTeam, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        sport_type_id: parseInt(currentSportType),
+                        faculty_id: parseInt(currentFaculty)
+                    })
+                });
+
+                if (!responseTeam.ok) {
+                    throw new Error(`HTTP error! status: ${responseTeam.status}`);
+                }
+
+                const resultsTeam = await responseTeam.json();
+
+                console.log(`${resultsTeam.message} - ${resultsTeam.team_id}`);
+
+                let url = `${API_URL}/students/new_student_team`;
+
+                const response =  await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        student_id: parseInt(change.studentId),
+                        team_id: parseInt(resultsTeam.team_id)
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const results = await response.json();
+
+                console.log(`${results.message} ${results.team_id} (${results.student_id})`);
+            }else if(change.action === 'remove'){
+                let url = `${API_URL}/students/delete_student_from_team`;
+
+                const response =  await fetch(url, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        student_id: parseInt(change.studentId),
+                        team_id: parseInt(teamId[1])
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const results = await response.json();
+
+                console.log(`${results.message} ${results.team_id} (${results.student_id})`);
+            }
+        }
+    }
+    changes = [];
+    await loadStudents();
+    await loadTeam();
 }

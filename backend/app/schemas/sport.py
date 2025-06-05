@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 
 
 class SportTypeBase(BaseModel):
@@ -20,7 +20,7 @@ class SportTypeRead(SportTypeBase):
 class TeamBase(BaseModel):
     sport_type_id: int
     faculty_id: int
-    student_ids: List[int]
+    student_ids: Optional[List[int]] = []
 
 
 class TeamCreate(TeamBase):

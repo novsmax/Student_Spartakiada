@@ -4,8 +4,9 @@ from sqlalchemy.orm import Session, joinedload
 from typing import Dict, List, Optional
 
 from ..database import get_db
-from ..models import Student, Faculty, Group, Competition, Judge, User, Team, team_students
-from ..schemas.student import StudentCreate, StudentRead, StudentFindOrCreateRequest, StudentFindOrCreateResponse
+from ..models import Student, Faculty, Group, Competition, Judge, User, Team, team_students, SportType
+from ..schemas.student import StudentCreate, StudentRead, StudentFindOrCreateRequest, StudentFindOrCreateResponse, StudentTeamCreate
+from ..schemas.sport import TeamCreate
 
 router = APIRouter()
 
@@ -116,12 +117,111 @@ def get_team_by_sport_faculty(
                 'last_name': student.last_name,
                 'middle_name': student.middle_name,
                 'gender': student.gender,
-                'group_number': student.group.number if student.group else None,
-                'sport_type_name': team.sport_type.name if team.sport_type else None,
-                'faculty_name': team.faculty.name if team.faculty else None
+                'group_number': student.group.number,
+                'sport_type_name': team.sport_type.name,
+                'faculty_name': team.faculty.name,
+                'team_id': team.id,
             })
     
     return result
+
+@router.post('/new_student_team')
+def create_new_student_team(
+    request: StudentTeamCreate, 
+    db: Session = Depends(get_db)
+):
+    
+    student = db.query(Student).filter(Student.id == request.student_id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Студент не найден")
+
+    team = db.query(Team).filter(Team.id == request.team_id).first()
+    if not team:
+        raise HTTPException(status_code=404, detail="Команда не найдена")
+
+    try:
+        student.teams.append(team)
+        db.commit()
+        return {
+            "message": "Студент успешно добавлен в команду",
+            "student_id": request.student_id,
+            "team_id": request.team_id
+        }
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Ошибка при добавлении студента в команду")
+
+@router.delete('/delete_student_from_team')
+def delete_student_from_team(
+    request: StudentTeamCreate, 
+    db: Session = Depends(get_db)
+):
+    
+    student = db.query(Student).filter(Student.id == request.student_id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Студент не найден")
+
+    team = db.query(Team).filter(Team.id == request.team_id).first()
+    if not team:
+        raise HTTPException(status_code=404, detail="Команда не найдена")
+    
+    try:
+        student.teams.remove(team)
+        db.commit()
+
+        remaining_students_count = db.query(team_students).filter(
+            team_students.c.team_id == request.team_id
+        ).count()
+        print(remaining_students_count)
+        if remaining_students_count == 0:
+            db.delete(team)
+            db.commit()
+            
+        return {
+            "message": "Студент успешно удален из команды",
+            "student_id": request.student_id,
+            "team_id": request.team_id
+        }
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Ошибка при удалении студента из команды")
+
+@router.post('/create_new_team')
+def create_new_team(
+    request: TeamCreate,
+    db: Session = Depends(get_db)
+):  
+    faculty = db.query(Faculty).filter(Faculty.id == request.faculty_id).first()
+    if not faculty:
+        raise HTTPException(status_code=404, detail="Факультет не найден")
+    
+    sport_type = db.query(SportType).filter(SportType.id == request.sport_type_id).first()
+    if not sport_type:
+        raise HTTPException(status_code=404, detail="Вид спорта не найден")
+
+    new_team = Team(
+        sport_type_id=request.sport_type_id,
+        faculty_id=request.faculty_id
+    )
+    
+    try:
+        db.add(new_team)
+        db.commit()
+        db.refresh(new_team)
+        
+        return {
+            "message": "Команда успешно создана",
+            "team_id": new_team.id,
+            "sport_type_id": new_team.sport_type_id,
+            "faculty_id": new_team.faculty_id
+        }
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Ошибка при создании команды: {str(e)}"
+        )
 
 @router.post("/find-or-create/", response_model=StudentFindOrCreateResponse)
 def find_or_create_student(

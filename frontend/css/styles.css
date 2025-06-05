@@ -795,6 +795,10 @@ body {
     flex-direction: column;
 }
 
+.new-tr {
+    background-color: #7ab8f6;
+}
+
 .table-header,
 .table-body {
     background-color: #fff;
