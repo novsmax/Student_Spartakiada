@@ -470,6 +470,8 @@ async function saveCnages(){
         alert('Нет изменений для сохранения');
         return;
     };
+    
+    currentGenderFilter = '';
 
     for (const change of changes) {
         let flag = true;
@@ -480,7 +482,6 @@ async function saveCnages(){
                 if(change.action === 'add' && change.studentId == studentId){
                     console.log(`уже в команде ${studentId}`);
                     flag = false;
-                    return;
                 }
             }
         };
